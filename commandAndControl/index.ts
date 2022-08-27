@@ -34,8 +34,17 @@ const createDeployment = async () => {
         sourceContext: {
             git: {
                 repoURL: "https://github.com/pulumi/deploy-demos.git",
-                branch: "refs/heads/master",
-                repoDir: "simple-resource"
+                branch: "refs/heads/main",
+                repoDir: "simple-resource",
+                gitAuth: {
+                    accessToken: {
+                        "type": "Literal",
+                        "literal": {
+                            "value": process.env.GITHUB_ACCESS_TOKEN
+                        }
+                        
+                    },
+                }
             }
         },
         operationContext: {
@@ -70,7 +79,7 @@ const run = async () => {
     let status = "not-started"
     while (nonTerminalDeploymentStatuses.includes(status)) {
         const deploymentStatusResult = await getDeploymentStatus(deploymentResult.id);
-        status = deploymentStatusResult.Status 
+        status = deploymentStatusResult.Status; 
         console.log(deploymentStatusResult);
 
         try {
