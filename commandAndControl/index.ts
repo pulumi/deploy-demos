@@ -37,13 +37,7 @@ const createDeployment = async () => {
                 branch: "refs/heads/main",
                 repoDir: "simple-resource",
                 gitAuth: {
-                    accessToken: {
-                        "type": "Literal",
-                        "literal": {
-                            "value": process.env.GITHUB_ACCESS_TOKEN
-                        }
-                        
-                    },
+                    accessToken: process.env.GITHUB_ACCESS_TOKEN,
                 }
             }
         },
@@ -71,25 +65,31 @@ function delay(ms: number) {
     return new Promise( resolve => setTimeout(resolve, ms) );
 }
 
+const printStatusAndLogs = async (deploymentID: string) =>{
+    const deploymentStatusResult = await getDeploymentStatus(deploymentID);
+    console.log(deploymentStatusResult);
+    const deploymentLogs = await getDeploymentLogs(deploymentID);
+    console.log(JSON.stringify(deploymentLogs));
+}
+
 const nonTerminalDeploymentStatuses = ["not-started", "accepted", "running"];
 
 const run = async () => {
     const deploymentResult = await createDeployment();
     console.log(deploymentResult);
     let status = "not-started"
-    while (nonTerminalDeploymentStatuses.includes(status)) {
+    while (nonTerminalDeploymentStatuses.includes(status) || !status) {
         const deploymentStatusResult = await getDeploymentStatus(deploymentResult.id);
-        status = deploymentStatusResult.Status; 
+        status = deploymentStatusResult.status; 
         console.log(deploymentStatusResult);
 
-        try {
-            const deploymentLogs = await getDeploymentLogs(deploymentResult.id);
-            console.log(JSON.stringify(deploymentLogs));
-        } catch {
-            // TODO: try catch block shouldn't be neccessary
-            // remove after https://github.com/pulumi/pulumi-service/issues/9756 is fixed
-        }
+        const deploymentLogs = await getDeploymentLogs(deploymentResult.id);
+        console.log(JSON.stringify(deploymentLogs));
+
         await delay(2000);
     }
+
+    // printStatusAndLogs("79fcd545-f9f0-4287-8c53-06072f508732")
+
 }
 run().catch(err => console.log(err));
