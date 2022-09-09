@@ -2,7 +2,7 @@ const org = "pulumi";
 const stack = "dev"
 const backendURL = "http://api.pulumi.com/api"
 
-type SupportedProject = "simple-resource" | "bucket-time";
+type SupportedProject = "simple-resource" | "bucket-time" | "go-bucket";
 
 const makePulumiAPICall = async (method: string, urlSuffix: string, payload?: any) => {
     const url = `${backendURL}/${urlSuffix}`
@@ -87,12 +87,41 @@ const createAwsBucketDeployment = async () => {
     return createDeployment("bucket-time", payload);
 }
 
+const createAwsGoBucketDeployment = async () => {
+    const payload = {
+        sourceContext: {
+            git: {
+                repoURL: "https://github.com/pulumi/deploy-demos.git",
+                branch: "refs/heads/main",
+                repoDir: "go-bucket",
+                gitAuth: {
+                    accessToken: process.env.GITHUB_ACCESS_TOKEN,
+                }
+            }
+        },
+        operationContext: {
+            operation: "update",
+            preRunCommands: [],
+            environmentVariables: {
+                AWS_REGION: "us-west-2",
+                AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+                AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+                AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
+            }
+        }
+    };
+
+    return createDeployment("go-bucket", payload);
+}
+
 const createProjectDeployment = async (project: SupportedProject) => {
     switch(project) {
         case "simple-resource":
             return createSimpleDeployment();
         case "bucket-time":
             return createAwsBucketDeployment();
+        case "go-bucket":
+            return createAwsGoBucketDeployment();
         default:
             throw new Error(`unable to deploy project. unknown project: ${project}`);
     }
@@ -120,7 +149,9 @@ const printStatusAndLogs = async (project: string, deploymentID: string) =>{
 const nonTerminalDeploymentStatuses = ["not-started", "accepted", "running"];
 
 const run = async () => {
-    const project: SupportedProject = "bucket-time";
+    // const project: SupportedProject = "bucket-time";
+    // const project: SupportedProject = "simple-resource";
+    const project: SupportedProject = "go-bucket";
     const deploymentResult = await createProjectDeployment(project)
     console.log(deploymentResult);
     let status = "not-started"
