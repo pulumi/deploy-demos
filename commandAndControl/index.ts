@@ -3,6 +3,7 @@ const stack = "dev"
 const backendURL = "http://api.pulumi.com/api"
 
 type SupportedProject = "simple-resource" | "bucket-time" | "go-bucket";
+type Operation = "update" | "preview" | "destroy" | "refresh";
 
 const makePulumiAPICall = async (method: string, urlSuffix: string, payload?: any) => {
     const url = `${backendURL}/${urlSuffix}`
@@ -35,7 +36,7 @@ const createDeployment = async (project: string, payload: any) => {
     return await makePulumiAPICall('POST', urlSuffix, payload);
 }
 
-const createSimpleDeployment = async () => {
+const createSimpleDeployment = async (op: Operation) => {
     const payload = {
         sourceContext: {
             git: {
@@ -48,7 +49,7 @@ const createSimpleDeployment = async () => {
             }
         },
         operationContext: {
-            operation: "update",
+            operation: op,
             preRunCommands: [
             ],
             environmentVariables: {
@@ -59,7 +60,7 @@ const createSimpleDeployment = async () => {
     return createDeployment("simple-resource", payload);
 }
 
-const createAwsBucketDeployment = async () => {
+const createAwsBucketDeployment = async (op: Operation) => {
     const payload = {
         sourceContext: {
             git: {
@@ -72,7 +73,7 @@ const createAwsBucketDeployment = async () => {
             }
         },
         operationContext: {
-            operation: "update",
+            operation: op,
             preRunCommands: [
             ],
             environmentVariables: {
@@ -87,7 +88,7 @@ const createAwsBucketDeployment = async () => {
     return createDeployment("bucket-time", payload);
 }
 
-const createAwsGoBucketDeployment = async () => {
+const createAwsGoBucketDeployment = async (op: Operation) => {
     const payload = {
         sourceContext: {
             git: {
@@ -100,7 +101,7 @@ const createAwsGoBucketDeployment = async () => {
             }
         },
         operationContext: {
-            operation: "update",
+            operation: op,
             preRunCommands: [],
             environmentVariables: {
                 AWS_REGION: "us-west-2",
@@ -114,14 +115,14 @@ const createAwsGoBucketDeployment = async () => {
     return createDeployment("go-bucket", payload);
 }
 
-const createProjectDeployment = async (project: SupportedProject) => {
+const createProjectDeployment = async (project: SupportedProject, op: Operation = "update") => {
     switch(project) {
         case "simple-resource":
-            return createSimpleDeployment();
+            return createSimpleDeployment(op);
         case "bucket-time":
-            return createAwsBucketDeployment();
+            return createAwsBucketDeployment(op);
         case "go-bucket":
-            return createAwsGoBucketDeployment();
+            return createAwsGoBucketDeployment(op);
         default:
             throw new Error(`unable to deploy project. unknown project: ${project}`);
     }
@@ -149,10 +150,11 @@ const printStatusAndLogs = async (project: string, deploymentID: string) =>{
 const nonTerminalDeploymentStatuses = ["not-started", "accepted", "running"];
 
 const run = async () => {
-    // const project: SupportedProject = "bucket-time";
+    // const project: SupportedProject = "go-bucket";
     // const project: SupportedProject = "simple-resource";
-    const project: SupportedProject = "go-bucket";
-    const deploymentResult = await createProjectDeployment(project)
+    const project: SupportedProject = "bucket-time";
+    const op: Operation = "destroy";
+    const deploymentResult = await createProjectDeployment(project, op);
     console.log(deploymentResult);
     let status = "not-started"
     while (nonTerminalDeploymentStatuses.includes(status) || !status) {
