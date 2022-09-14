@@ -153,7 +153,7 @@ const run = async () => {
     // const project: SupportedProject = "go-bucket";
     // const project: SupportedProject = "simple-resource";
     const project: SupportedProject = "bucket-time";
-    const op: Operation = "destroy";
+    const op: Operation = "update";
     const deploymentResult = await createProjectDeployment(project, op);
     console.log(deploymentResult);
     let status = "not-started"
