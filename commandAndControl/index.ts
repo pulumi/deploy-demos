@@ -149,24 +149,88 @@ const printStatusAndLogs = async (project: string, deploymentID: string) =>{
 
 const nonTerminalDeploymentStatuses = ["not-started", "accepted", "running"];
 
-const run = async () => {
-    // const project: SupportedProject = "go-bucket";
-    // const project: SupportedProject = "simple-resource";
-    const project: SupportedProject = "bucket-time";
-    const op: Operation = "update";
-    const deploymentResult = await createProjectDeployment(project, op);
-    console.log(deploymentResult);
-    let status = "not-started"
-    while (nonTerminalDeploymentStatuses.includes(status) || !status) {
-        const deploymentStatusResult = await getDeploymentStatus(project, deploymentResult.id);
-        status = deploymentStatusResult.status; 
+type DeploymentAction = {
+    project: SupportedProject;
+    op: Operation;
+    id?: string;
+};
+
+const queryDeployment = async (deployment: DeploymentAction) => {
+    const { project, id } = deployment;
+    let isDeploymentComplete = false;
+
+    const deploymentStatusResult = await getDeploymentStatus(project, id!);
+        let status = deploymentStatusResult.status; 
         console.log(deploymentStatusResult);
 
-        const deploymentLogs = await getDeploymentLogs(project, deploymentResult.id);
+        const deploymentLogs = await getDeploymentLogs(project, id!);
         console.log(JSON.stringify(deploymentLogs));
 
+    return isDeploymentComplete;
+}
+
+const monitorDeployments = async (deployments: DeploymentAction[]) => {
+    
+    let deploymentIDs = deployments.map(d => d.id!);
+
+    while(deploymentIDs.length) {
+        let completedDeployments: string[]= [];
+        for(let deploymentID of deploymentIDs) {
+            let deployment = deployments.find( d => (d.id!) === deploymentID);
+            if(await queryDeployment(deployment!)){
+                completedDeployments.push(deploymentID);
+            }
+        }
+        // filter out completed deployments for the next pass
+        deploymentIDs = deploymentIDs.filter(x => completedDeployments.indexOf(x) === -1);
+        console.log(`Finished polling deployments: ${completedDeployments.length} out of ${deploymentIDs.length} complete.`);
         await delay(2000);
     }
+};
+
+const execDeployments = async (deployments: DeploymentAction[]) => {
+    let deploymentNumber = 1;
+    for(let deployment of deployments) {
+        console.log(`executing deployment ${deploymentNumber}`)
+        const deploymentResult = await createProjectDeployment(deployment.project, deployment.op);
+        console.log(deploymentResult);
+        deployment.id = deploymentResult.id;
+        deploymentNumber++;
+    }
+
+    return deployments;
+}
+
+const execDeploymentsAndMonitorToCompletion = async (deployments: DeploymentAction[]) => {
+    deployments = await execDeployments(deployments);
+    await monitorDeployments(deployments);
+
+    return deployments;
+};
+
+const run = async () => {
+
+    // // const project: SupportedProject = "go-bucket";
+    // const project: SupportedProject = "simple-resource";
+    // // const project: SupportedProject = "bucket-time";
+    // const op: Operation = "update";
+    // const deployments: DeploymentAction[] = [{
+    //     project,
+    //     op,
+    // }];
+    
+
+
+    const deployments: DeploymentAction[] = [];
+
+    for (let i = 0; i < 9; i++) {
+        deployments.push({
+            project: "bucket-time",
+            op: "update",
+        });
+    }
+
+    await execDeploymentsAndMonitorToCompletion(deployments);
 
     // useful for debugging the driver if it happens to exit early before a deployment has finished (ie an API field changes)
     // printStatusAndLogs("79fcd545-f9f0-4287-8c53-06072f508732")
