@@ -215,6 +215,8 @@ const execDeploymentsAndMonitorToCompletion = async (deployments: DeploymentActi
 
 const run = async () => {
 
+    // run a single supported project
+
     // // const project: SupportedProject = "go-bucket";
     // const project: SupportedProject = "simple-resource";
     // // const project: SupportedProject = "bucket-time";
@@ -225,15 +227,32 @@ const run = async () => {
     // }];
     
 
+    // parallel load test variant targeting the same stack
 
-    const deployments: DeploymentAction[] = [];
+    // const deployments: DeploymentAction[] = [];
+    // for (let i = 0; i < 9; i++) {
+    //     deployments.push({
+    //         project: "bucket-time",
+    //         op: "update",
+    //     });
+    // }
 
-    for (let i = 0; i < 9; i++) {
-        deployments.push({
+
+    // deploy all three sample programs simultaneously
+    const deployments: DeploymentAction[] = [
+        {
             project: "bucket-time",
             op: "update",
-        });
-    }
+        },
+        {
+            project: "simple-resource",
+            op: "update",
+        },
+        {
+            project: "go-bucket",
+            op: "update",
+        },
+    ];
 
     await execDeploymentsAndMonitorToCompletion(deployments);
 
