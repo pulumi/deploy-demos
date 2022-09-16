@@ -149,24 +149,28 @@ const printStatusAndLogs = async (project: string, deploymentID: string) =>{
 
 const nonTerminalDeploymentStatuses = ["not-started", "accepted", "running"];
 
+const isDeploymentRunning = (status: string) => {
+    return (nonTerminalDeploymentStatuses.includes(status) || !status);
+}
+
 type DeploymentAction = {
     project: SupportedProject;
     op: Operation;
     id?: string;
+    status?: string;
 };
 
 const queryDeployment = async (deployment: DeploymentAction) => {
     const { project, id } = deployment;
-    let isDeploymentComplete = false;
 
     const deploymentStatusResult = await getDeploymentStatus(project, id!);
-        let status = deploymentStatusResult.status; 
+        deployment.status = deploymentStatusResult.status; 
         console.log(deploymentStatusResult);
 
         const deploymentLogs = await getDeploymentLogs(project, id!);
         console.log(JSON.stringify(deploymentLogs));
 
-    return isDeploymentComplete;
+    return !isDeploymentRunning(deployment.status!);
 }
 
 const monitorDeployments = async (deployments: DeploymentAction[]) => {
@@ -205,6 +209,7 @@ const execDeploymentsAndMonitorToCompletion = async (deployments: DeploymentActi
     deployments = await execDeployments(deployments);
     await monitorDeployments(deployments);
 
+    console.log(JSON.stringify(deployments, null, 2));
     return deployments;
 };
 
