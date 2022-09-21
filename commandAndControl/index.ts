@@ -2,7 +2,7 @@ const org = "pulumi";
 const stack = "dev"
 const backendURL = "http://api.pulumi.com/api"
 
-type SupportedProject = "simple-resource" | "bucket-time" | "go-bucket";
+type SupportedProject = "simple-resource" | "bucket-time" | "go-bucket" | "lambda-template";
 type Operation = "update" | "preview" | "destroy" | "refresh";
 
 const makePulumiAPICall = async (method: string, urlSuffix: string, payload?: any) => {
@@ -88,6 +88,41 @@ const createAwsBucketDeployment = async (op: Operation) => {
     return createDeployment("bucket-time", payload);
 }
 
+const createLambdaTemplateDeployment = async (op: Operation) => {
+    const helloWorldHandler = `
+    exports.handler =  async function(event, context) {
+        console.log("EVENT:    " + JSON.stringify(event, null, 2))
+        return context.logStreamName
+    }
+    `;
+    const payload = {
+        sourceContext: {
+            git: {
+                repoURL: "https://github.com/pulumi/deploy-demos.git",
+                branch: "refs/heads/main",
+                repoDir: "lambda-template",
+                gitAuth: {
+                    accessToken: process.env.GITHUB_ACCESS_TOKEN,
+                }
+            }
+        },
+        operationContext: {
+            operation: op,
+            preRunCommands: [
+            ],
+            environmentVariables: {
+                AWS_REGION: "us-west-2",
+                AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+                AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+                AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
+                LAMBDA_CODE: helloWorldHandler,
+            }
+        }
+    };
+
+    return createDeployment("lambda-template", payload);
+}
+
 const createAwsGoBucketDeployment = async (op: Operation) => {
     const payload = {
         sourceContext: {
@@ -123,6 +158,8 @@ const createProjectDeployment = async (project: SupportedProject, op: Operation 
             return createAwsBucketDeployment(op);
         case "go-bucket":
             return createAwsGoBucketDeployment(op);
+        case "lambda-template":
+            return createLambdaTemplateDeployment(op);
         default:
             throw new Error(`unable to deploy project. unknown project: ${project}`);
     }
@@ -236,6 +273,15 @@ const run = async () => {
     //         op: "update",
     //     });
     // }
+
+
+     // lambda deployment - specify a function as a string (environment variable) and deploy it
+    //  const deployments: DeploymentAction[] = [
+    //     {
+    //         project: "lambda-template",
+    //         op: "update",
+    //     },
+    // ];
 
 
     // deploy all three sample programs simultaneously
