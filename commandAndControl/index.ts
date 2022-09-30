@@ -189,6 +189,7 @@ const getDeploymentLogs = async (deployment: DeploymentAction) => {
             if(deployment.logMarker!.currentStep >= deployment.logMarker!.totalSteps!) {
                 break;
             }
+            logs.push(`\nstep: ${deployment.logMarker!.currentStep}\n`);
         }
 
         hasMoreLogs = logsResponse.nextOffset !== nextOffset;
@@ -203,9 +204,12 @@ function delay(ms: number) {
 
 const printStatusAndLogs = async (deployment: DeploymentAction) =>{
     const deploymentStatusResult = await getDeploymentStatus(deployment);
-    console.log(deploymentStatusResult);
+
     const deploymentLogs = await getDeploymentLogs(deployment);
-    console.log(deploymentLogs.join(''));
+    const logs = deploymentLogs.join('');
+
+    console.log(deploymentStatusResult);
+    console.log(logs);
 }
 
 const nonTerminalDeploymentStatuses = ["not-started", "accepted", "running"];
@@ -242,17 +246,20 @@ const queryDeployment = async (deployment: DeploymentAction) => {
 
     const deploymentStatusResult = await getDeploymentStatus(deployment);
         deployment.status = deploymentStatusResult.status; 
-        console.log(deploymentStatusResult);
 
         // we only have enough state about the deployment to query for logs once it reaches "running" state
         // https://github.com/pulumi/pulumi-service/issues/10266
         if (deployment.status !== "not-started") {
             deployment.logMarker.totalSteps = deploymentStatusResult.jobs[0].steps.length;
             const deploymentLogs = await getDeploymentLogs(deployment);
-            console.log(deploymentLogs.join(''));
+            const logs = deploymentLogs.join('');
+            if (logs) {
+                console.log(deploymentStatusResult);
+                console.log(logs);
+            }
+        } else {
+            console.log(deploymentStatusResult);
         }
-
-        
 
     return !isDeploymentRunning(deployment.status!);
 }
@@ -333,14 +340,14 @@ const run = async () => {
 
     // deploy all three sample programs simultaneously
     const deployments: DeploymentAction[] = [
-        {
-            project: "bucket-time",
-            op: "update",
-        },
-        {
-            project: "simple-resource",
-            op: "update",
-        },
+        // {
+        //     project: "bucket-time",
+        //     op: "update",
+        // },
+        // {
+        //     project: "simple-resource",
+        //     op: "update",
+        // },
         {
             project: "go-bucket",
             op: "update",
