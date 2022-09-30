@@ -165,23 +165,47 @@ const createProjectDeployment = async (project: SupportedProject, op: Operation 
     }
 }
 
-const getDeploymentStatus = async (project: string, deploymentID: string) => {
-   return await makePulumiAPICall("GET", `preview/${org}/${project}/${stack}/deployments/${deploymentID}`)
+const getDeploymentStatus = async (deployment: DeploymentAction) => {
+
+   return await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}`)
 }
 
-const getDeploymentLogs = async (project: string, deploymentID: string) => {
-    return await makePulumiAPICall("GET", `preview/${org}/${project}/${stack}/deployments/${deploymentID}/logs`)
+const getDeploymentLogs = async (deployment: DeploymentAction) => {
+    let hasMoreLogs = true;
+    const logs: string[] = [];
+
+    while(hasMoreLogs) {
+        const { currentStep, currentJob, nextOffset } = deployment.logMarker!;
+
+        const query = `job=${currentJob}&step=${currentStep}&offset=${nextOffset}`;
+        const logsResponse = await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}/logs?${query}`);
+        const logLines = (logsResponse.lines || []).map((l:any) => `${l.timestamp}: ${l.line}`);
+        logs.push(...logLines);
+        if (logsResponse.nextOffset !== undefined) {
+            deployment.logMarker!.nextOffset = logsResponse.nextOffset;
+        } else {
+            deployment.logMarker!.nextOffset = 0;
+            deployment.logMarker!.currentStep = deployment.logMarker!.currentStep! + 1;
+            if(deployment.logMarker!.currentStep >= deployment.logMarker!.totalSteps!) {
+                break;
+            }
+        }
+
+        hasMoreLogs = logsResponse.nextOffset !== nextOffset;
+    }
+
+    return logs;
  }
 
 function delay(ms: number) {
     return new Promise( resolve => setTimeout(resolve, ms) );
 }
 
-const printStatusAndLogs = async (project: string, deploymentID: string) =>{
-    const deploymentStatusResult = await getDeploymentStatus(project, deploymentID);
+const printStatusAndLogs = async (deployment: DeploymentAction) =>{
+    const deploymentStatusResult = await getDeploymentStatus(deployment);
     console.log(deploymentStatusResult);
-    const deploymentLogs = await getDeploymentLogs(project, deploymentID);
-    console.log(JSON.stringify(deploymentLogs));
+    const deploymentLogs = await getDeploymentLogs(deployment);
+    console.log(deploymentLogs.join(''));
 }
 
 const nonTerminalDeploymentStatuses = ["not-started", "accepted", "running"];
@@ -195,17 +219,40 @@ type DeploymentAction = {
     op: Operation;
     id?: string;
     status?: string;
+    logMarker?: DeploymentLogMarker
 };
 
-const queryDeployment = async (deployment: DeploymentAction) => {
-    const { project, id } = deployment;
+type DeploymentLogMarker = {
+    nextOffset?: number;
+    currentStep?: number;
+    currentJob?: number; // always 1 in current impl
+    totalSteps?: number;
+    totalJobs?: number; // always 1 in current impl
+}
 
-    const deploymentStatusResult = await getDeploymentStatus(project, id!);
+const queryDeployment = async (deployment: DeploymentAction) => {
+    if(!deployment.logMarker) {
+        deployment.logMarker = {
+            nextOffset: 0,
+            currentJob: 0, // always 1 in current impl
+            currentStep: 0,
+            totalJobs: 1,
+        };
+    }
+
+    const deploymentStatusResult = await getDeploymentStatus(deployment);
         deployment.status = deploymentStatusResult.status; 
         console.log(deploymentStatusResult);
 
-        const deploymentLogs = await getDeploymentLogs(project, id!);
-        console.log(JSON.stringify(deploymentLogs));
+        // we only have enough state about the deployment to query for logs once it reaches "running" state
+        // https://github.com/pulumi/pulumi-service/issues/10266
+        if (deployment.status !== "not-started") {
+            deployment.logMarker.totalSteps = deploymentStatusResult.jobs[0].steps.length;
+            const deploymentLogs = await getDeploymentLogs(deployment);
+            console.log(deploymentLogs.join(''));
+        }
+
+        
 
     return !isDeploymentRunning(deployment.status!);
 }
