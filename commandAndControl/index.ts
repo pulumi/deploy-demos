@@ -31,7 +31,7 @@ const makePulumiAPICall = async (method: string, urlSuffix: string, payload?: an
 }
 
 const createDeployment = async (project: string, payload: any) => {
-    const urlSuffix  = `preview/deployments/${org}/${project}/${stack}`;
+    const urlSuffix  = `preview/${org}/${project}/${stack}/deployments`;
 
     return await makePulumiAPICall('POST', urlSuffix, payload);
 }
@@ -166,11 +166,11 @@ const createProjectDeployment = async (project: SupportedProject, op: Operation 
 }
 
 const getDeploymentStatus = async (project: string, deploymentID: string) => {
-   return await makePulumiAPICall("GET", `preview/deployments/${org}/${project}/${stack}/${deploymentID}`)
+   return await makePulumiAPICall("GET", `preview/${org}/${project}/${stack}/deployments/${deploymentID}`)
 }
 
 const getDeploymentLogs = async (project: string, deploymentID: string) => {
-    return await makePulumiAPICall("GET", `preview/deployments/${org}/${project}/${stack}/${deploymentID}/logs`)
+    return await makePulumiAPICall("GET", `preview/${org}/${project}/${stack}/deployments/${deploymentID}/logs`)
  }
 
 function delay(ms: number) {
