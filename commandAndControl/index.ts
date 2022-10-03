@@ -171,30 +171,17 @@ const getDeploymentStatus = async (deployment: DeploymentAction) => {
 }
 
 const getDeploymentLogs = async (deployment: DeploymentAction) => {
-    let hasMoreLogs = true;
     const logs: string[] = [];
-
-    while(hasMoreLogs) {
-        const { currentStep, currentJob, nextOffset } = deployment.logMarker!;
-
-        const query = `job=${currentJob}&step=${currentStep}&offset=${nextOffset}`;
+    do {
+        const query = `token=${deployment.logToken || ""}`;
         const logsResponse = await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}/logs?${query}`);
-        const logLines = (logsResponse.lines || []).map((l:any) => `${l.timestamp}: ${l.line}`);
-        logs.push(...logLines);
-        if (logsResponse.nextOffset !== undefined) {
-            deployment.logMarker!.nextOffset = logsResponse.nextOffset;
-        } else {
-            deployment.logMarker!.nextOffset = 0;
-            deployment.logMarker!.currentStep = deployment.logMarker!.currentStep! + 1;
-            if(deployment.logMarker!.currentStep >= deployment.logMarker!.totalSteps!) {
-                break;
-            }
-            logs.push(`\nstep: ${deployment.logMarker!.currentStep}\n`);
+        const logLines = (logsResponse.lines || []).map((l: any) => l.header ? `\n:step: ${l.header}\n` : `${l.timestamp}] ${l.line}`);
+        logs.push(logLines...);
+        if (!logsResponse.nextToken || logsResponse.nextToken === deployment.logToken) {
+            break;
         }
-
-        hasMoreLogs = logsResponse.nextOffset !== nextOffset;
+        deployment.logToken = logsReponse.nextToken;
     }
-
     return logs;
  }
 
@@ -223,45 +210,22 @@ type DeploymentAction = {
     op: Operation;
     id?: string;
     status?: string;
-    logMarker?: DeploymentLogMarker
+    logToken?: string;
 };
 
-type DeploymentLogMarker = {
-    nextOffset?: number;
-    currentStep?: number;
-    currentJob?: number; // always 1 in current impl
-    totalSteps?: number;
-    totalJobs?: number; // always 1 in current impl
-}
-
 const queryDeployment = async (deployment: DeploymentAction) => {
-    if(!deployment.logMarker) {
-        deployment.logMarker = {
-            nextOffset: 0,
-            currentJob: 0, // always 1 in current impl
-            currentStep: 0,
-            totalJobs: 1,
-        };
+    const deploymentStatusResult = await getDeploymentStatus(deployment);
+    const finished = !isDeploymentRunning(deploymentStatusResult.status);
+    deployment.status = deploymentStatusResult.status; 
+
+    const deploymentLogs = await getDeploymentLogs(deployment);
+    const logs = deploymentLogs.join('');
+    if (logs || finished) {
+        console.log(deploymentStatusResult);
+        console.log(logs);
     }
 
-    const deploymentStatusResult = await getDeploymentStatus(deployment);
-        deployment.status = deploymentStatusResult.status; 
-
-        // we only have enough state about the deployment to query for logs once it reaches "running" state
-        // https://github.com/pulumi/pulumi-service/issues/10266
-        if (deployment.status !== "not-started") {
-            deployment.logMarker.totalSteps = deploymentStatusResult.jobs[0].steps.length;
-            const deploymentLogs = await getDeploymentLogs(deployment);
-            const logs = deploymentLogs.join('');
-            if (logs) {
-                console.log(deploymentStatusResult);
-                console.log(logs);
-            }
-        } else {
-            console.log(deploymentStatusResult);
-        }
-
-    return !isDeploymentRunning(deployment.status!);
+    return finished;
 }
 
 const monitorDeployments = async (deployments: DeploymentAction[]) => {
