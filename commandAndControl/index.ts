@@ -1,6 +1,6 @@
 const org = "pulumi";
-const stack = "dev"
-const backendURL = "http://api.pulumi.com/api"
+const stack = "dev";
+const backendURL = "https://api.pulumi.com/api"
 
 type SupportedProject = "simple-resource" | "bucket-time" | "go-bucket" | "lambda-template";
 type Operation = "update" | "preview" | "destroy" | "refresh";
@@ -18,6 +18,11 @@ const makePulumiAPICall = async (method: string, urlSuffix: string, payload?: an
         headers,
         body: payload ? JSON.stringify(payload) : undefined
     });
+
+    // An HTTP 409 means the Deployment logs aren't available yet. We'll retry.
+    if (response.status === 409) {
+        return
+    }
 
     if(!response.ok) {
         let errMessage = "";
@@ -170,29 +175,72 @@ const getDeploymentStatus = async (deployment: DeploymentAction) => {
    return await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}`)
 }
 
-const getDeploymentLogs = async (deployment: DeploymentAction) => {
+// Gets logs for a Deployment by Job. Each step in the process is unknown to the caller,
+// and can only operate on the continuation token informing of the next action to take.
+//
+// The continuation token is a string that represents the step:offset in the logs to request.
+const getDeploymentLogsByJob = async (deployment: DeploymentAction) => {
     let hasMoreLogs = true;
     const logs: string[] = [];
 
-    while(hasMoreLogs) {
-        const { currentStep, currentJob, nextOffset } = deployment.logMarker!;
+    while (hasMoreLogs) {
+        const {currentJob, continuationToken} = deployment.logMarker!;
+        let query = `job=${currentJob}`;
 
-        const query = `job=${currentJob}&step=${currentStep}&offset=${nextOffset}`;
-        const logsResponse = await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}/logs?${query}`);
-        const logLines = (logsResponse.lines || []).map((l:any) => `${l.timestamp}: ${l.line}`);
-        logs.push(...logLines);
-        if (logsResponse.nextOffset !== undefined) {
-            deployment.logMarker!.nextOffset = logsResponse.nextOffset;
-        } else {
-            deployment.logMarker!.nextOffset = 0;
-            deployment.logMarker!.currentStep = deployment.logMarker!.currentStep! + 1;
-            if(deployment.logMarker!.currentStep >= deployment.logMarker!.totalSteps!) {
-                break;
-            }
-            logs.push(`\nstep: ${deployment.logMarker!.currentStep}\n`);
+        if (continuationToken !== undefined) {
+            query+= `&continuationToken=${continuationToken}`;
         }
 
-        hasMoreLogs = logsResponse.nextOffset !== nextOffset;
+        const logsResponse = await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}/logs?${query}`);
+        const logLines = (logsResponse.lines || []).map((l: any) => `${l.timestamp}: ${l.line}`);
+
+        // If this is the first request, add the step name to the logs.
+        if (continuationToken === undefined) {
+            logs.push('--- Step: ' + logsResponse.name + '\n')
+        }
+
+        if (logsResponse.continuationToken !== undefined) {
+            let splitToken = logsResponse.continuationToken.split(":");
+             // If this is the first request for a new step, add a header.
+            if  (splitToken[1] === '0' && logLines.length > 0) {
+                logs.push('--- Step: ' + logsResponse.name + '\n')
+            }
+            deployment.logMarker!.continuationToken = logsResponse.continuationToken;
+        } else {
+            hasMoreLogs = false;
+        }
+        logs.push(...logLines);
+    }
+    return logs;
+}
+
+// Gets logs for a Deployment by Step.
+// Logs are requested by step and offset. Each step result returns a nextOffset
+// informing the caller of the next offset to request and that there are more logs
+// to be retrieved.
+//
+// If the nextOffset is undefined, then no more logs are available for the step.
+const getDeploymentLogsByStep = async (deployment: DeploymentAction) => {
+    const logs: string[] = [];
+
+    // Loop through all the steps in the Job starting at step00, offset=0.
+    // While the offset is defined, we have more logs to fetch. When the offset===undefined,
+    // no more logs are available for that step.
+    //
+    // Iterate to the next step and repeat until all steps have been fetched.
+    for (let i = 0; i < deployment.steps!.length; i++) {
+        const step = deployment.steps![i];
+        logs.push('--- Step: ' + step.name + '\n')
+
+        let offset = 0;
+        while(offset !== undefined) {
+            const query = `job=0&step=${i}&offset=${offset}`;
+            const logsResponse = await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}/logs?${query}`);
+            const logLines = (logsResponse.lines || []).map((l: any) => `${l.timestamp}: ${l.line}`);
+            logs.push(...logLines);
+
+            offset = logsResponse.nextOffset;
+        }
     }
 
     return logs;
@@ -205,7 +253,7 @@ function delay(ms: number) {
 const printStatusAndLogs = async (deployment: DeploymentAction) =>{
     const deploymentStatusResult = await getDeploymentStatus(deployment);
 
-    const deploymentLogs = await getDeploymentLogs(deployment);
+    const deploymentLogs = await getDeploymentLogsByJob(deployment);
     const logs = deploymentLogs.join('');
 
     console.log(deploymentStatusResult);
@@ -223,7 +271,8 @@ type DeploymentAction = {
     op: Operation;
     id?: string;
     status?: string;
-    logMarker?: DeploymentLogMarker
+    steps?: DeploymentStep[];
+    logMarker?: DeploymentLogMarker;
 };
 
 type DeploymentLogMarker = {
@@ -232,6 +281,11 @@ type DeploymentLogMarker = {
     currentJob?: number; // always 1 in current impl
     totalSteps?: number;
     totalJobs?: number; // always 1 in current impl
+    continuationToken?: string;
+}
+
+type DeploymentStep = {
+    name: string;
 }
 
 const queryDeployment = async (deployment: DeploymentAction) => {
@@ -245,13 +299,16 @@ const queryDeployment = async (deployment: DeploymentAction) => {
     }
 
     const deploymentStatusResult = await getDeploymentStatus(deployment);
-        deployment.status = deploymentStatusResult.status; 
+        deployment.status = deploymentStatusResult.status;
 
         // we only have enough state about the deployment to query for logs once it reaches "running" state
         // https://github.com/pulumi/pulumi-service/issues/10266
-        if (deployment.status !== "not-started") {
+        if (deployment.status !== "not-started" && deployment.status !== "accepted") {
             deployment.logMarker.totalSteps = deploymentStatusResult.jobs[0].steps.length;
-            const deploymentLogs = await getDeploymentLogs(deployment);
+            deployment.steps = deploymentStatusResult.jobs[0].steps;
+
+            // const deploymentLogs = await getDeploymentLogsByJob(deployment); (Blocked on https://github.com/pulumi/pulumi-service/pull/10276)
+            const deploymentLogs = await getDeploymentLogsByStep(deployment);
             const logs = deploymentLogs.join('');
             if (logs) {
                 console.log(deploymentStatusResult);
