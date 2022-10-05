@@ -16,7 +16,7 @@ In addition to the payload, the request URL matches the org/project/stack like i
 
 ```
 $ curl -i -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- http://api.pulumi.com/api/preview/deployments/stevesloka/aws-ts-s3-folder/dev -d '{
+ http://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments -d '{
     "sourceContext": {
         "git": {
             "repoURL": "https://github.com/pulumi/examples.git",
@@ -46,7 +46,7 @@ You can get the status of your Deployment via the Project's Stack Page in the Pu
 Example: 
 ```
 $ curl -i -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \                              
-https://api.pulumi.com/api/preview/deployments/stevesloka/aws-ts-s3-folder/dev/08a4e65c-f1f8-4b47-8f7a-cdac9788dcad
+https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments/08a4e65c-f1f8-4b47-8f7a-cdac9788dcad
 HTTP/2 200 
 date: Wed, 24 Aug 2022 17:44:06 GMT
 content-type: application/json
@@ -58,7 +58,7 @@ x-pulumi-request-id: e5834a89-edc9-403a-81dc-3f71cf6efb54
 
 ### Logs
 
-You can get the logs from the Deployments from the following endpoint: `/api/preview/deployments/{orgName}/{projectName}/{stackName}/{deploymentId}/logs`
+You can get the logs from the Deployments from the following endpoint: `/api/preview/{orgName}/{projectName}/{stackName}/deployments/{deploymentId}/logs`
 
 There are a set of query parameters which are available:
 
@@ -74,7 +74,7 @@ Example:
 First get all the steps of the Deployment:
 ```
 curl -i -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- http://localhost:8080/api/preview/deployments/k8s/resource-test/dev/2ee5b292-28bb-44a5-8532-b6ac32f4ec49                               
+ http://localhost:8080/api/preview/k8s/resource-test/dev/deployments/2ee5b292-28bb-44a5-8532-b6ac32f4ec49                               
 {
     "id": "2ee5b292-28bb-44a5-8532-b6ac32f4ec49",
     "created": "2022-09-14 18:06:41.669",
@@ -128,7 +128,7 @@ Get Logs for a Deployment starting at the zero offset and a count size of 10, me
 GET Deployment/{id}/logs/{job}?step=5&count=10&offset=0
 ```
 curl -i -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- http://localhost:8080/api/preview/deployments/k8s/resource-test/dev/2ee5b292-28bb-44a5-8532-b6ac32f4ec49/logs/?step=5&count=10&offset=0
+ http://localhost:8080/api/preview/k8s/resource-test/dev/deployments/2ee5b292-28bb-44a5-8532-b6ac32f4ec49/logs/?step=5&count=10&offset=0
 
 {
     "nextOffset": 10,
@@ -180,7 +180,7 @@ curl -i -XGET -H "Content-Type: application/json" -H "Authorization: token $PULU
 No more logs are available, so nextOffset is missing from the response:
 ```
 $ curl -i -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- http://localhost:8080/api/preview/deployments/k8s/resource-test/dev/2ee5b292-28bb-44a5-8532-b6ac32f4ec49/logs/?step=5&count=10&offset=10
+ http://localhost:8080/api/preview/k8s/resource-test/dev/deployments/2ee5b292-28bb-44a5-8532-b6ac32f4ec49/logs/?step=5&count=10&offset=10
 {
     "lines": [
         {
