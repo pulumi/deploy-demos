@@ -175,7 +175,10 @@ const getDeploymentLogs = async (deployment: DeploymentAction) => {
     const logs: string[] = [];
 
     while(hasMoreLogs) {
-        const { currentStep, currentJob, nextOffset } = deployment.logMarker!;
+        const { currentStep, currentJob, nextOffset, totalSteps } = deployment.logMarker!;
+        if (currentStep! >= totalSteps!) {
+            return logs;
+        }
 
         const query = `job=${currentJob}&step=${currentStep}&offset=${nextOffset}`;
         const logsResponse = await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}/logs?${query}`);
@@ -249,7 +252,8 @@ const queryDeployment = async (deployment: DeploymentAction) => {
 
         // we only have enough state about the deployment to query for logs once it reaches "running" state
         // https://github.com/pulumi/pulumi-service/issues/10266
-        if (deployment.status !== "not-started") {
+        // https://github.com/pulumi/pulumi-service/issues/10339
+        if (deployment.status === "running" || deployment.status === "succeeded") {
             deployment.logMarker.totalSteps = deploymentStatusResult.jobs[0].steps.length;
             const deploymentLogs = await getDeploymentLogs(deployment);
             const logs = deploymentLogs.join('');
