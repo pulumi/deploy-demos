@@ -30,9 +30,10 @@ $ cd ../../pulumi-programs/simple-resource
 $ pulumi stack init dev
 ```
 
-With the stack created, you can run the deployment driver: 
+`cd` back into the deploymetn driver directory. With the stack created, you can run the deployment driver: 
 
 ```console
+# from /typescript-driver
 $ yarn install
 $ export PULUMI_ACCESS_TOKEN=...
 $ export GITHUB_ACCESS_TOKEN=...

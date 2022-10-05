@@ -2,7 +2,7 @@
 
 # Pulumi Deploy
 
-Pulumi Deploy is a new product to power infrastructure and plaform automation. It consists of three components:
+Pulumi Deploy is a new product to power infrastructure and platform automation. It consists of three components:
 
 1. __The Programmatic Deployment API__ - run Pulumi programs (`pulumi up`, `pulumi refresh`, etc) on Pulumi Service hardware (api.pulumi.com).
 2. __Deployment Visualization__ - rich UX to visualize deployment status, deployment logs, and queueing from via the Pulumi Service Console (app.pulumi.com). (coming soon!)
