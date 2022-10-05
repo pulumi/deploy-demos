@@ -42,7 +42,7 @@ const createSimpleDeployment = async (op: Operation) => {
             git: {
                 repoURL: "https://github.com/pulumi/deploy-demos.git",
                 branch: "refs/heads/main",
-                repoDir: "simple-resource",
+                repoDir: "pulumi-programs/simple-resource",
                 gitAuth: {
                     accessToken: process.env.GITHUB_ACCESS_TOKEN,
                 }
@@ -66,7 +66,7 @@ const createAwsBucketDeployment = async (op: Operation) => {
             git: {
                 repoURL: "https://github.com/pulumi/deploy-demos.git",
                 branch: "refs/heads/main",
-                repoDir: "bucket-time",
+                repoDir: "pulumi-programs/bucket-time",
                 gitAuth: {
                     accessToken: process.env.GITHUB_ACCESS_TOKEN,
                 }
@@ -100,7 +100,7 @@ const createLambdaTemplateDeployment = async (op: Operation) => {
             git: {
                 repoURL: "https://github.com/pulumi/deploy-demos.git",
                 branch: "refs/heads/main",
-                repoDir: "lambda-template",
+                repoDir: "pulumi-programs/lambda-template",
                 gitAuth: {
                     accessToken: process.env.GITHUB_ACCESS_TOKEN,
                 }
@@ -129,7 +129,7 @@ const createAwsGoBucketDeployment = async (op: Operation) => {
             git: {
                 repoURL: "https://github.com/pulumi/deploy-demos.git",
                 branch: "refs/heads/main",
-                repoDir: "go-bucket",
+                repoDir: "pulumi-programs/go-bucket",
                 gitAuth: {
                     accessToken: process.env.GITHUB_ACCESS_TOKEN,
                 }
@@ -306,58 +306,30 @@ const execDeploymentsAndMonitorToCompletion = async (deployments: DeploymentActi
 
 const run = async () => {
 
-    // run a single supported project
+    // This snippet controls which pulumi-program gets run. 
+    // You can alter this to point to a different pulumi program.
+    // Edit the pulumi programs in the root level `/pulumi-programs` directory to create more cloud resources
 
-    // // const project: SupportedProject = "go-bucket";
-    // const project: SupportedProject = "simple-resource";
-    // // const project: SupportedProject = "bucket-time";
-    // const op: Operation = "update";
-    // const deployments: DeploymentAction[] = [{
-    //     project,
-    //     op,
-    // }];
-    
-
-    // parallel load test variant targeting the same stack
-
-    // const deployments: DeploymentAction[] = [];
-    // for (let i = 0; i < 9; i++) {
-    //     deployments.push({
-    //         project: "bucket-time",
-    //         op: "update",
-    //     });
-    // }
-
-
-     // lambda deployment - specify a function as a string (environment variable) and deploy it
-    //  const deployments: DeploymentAction[] = [
-    //     {
-    //         project: "lambda-template",
-    //         op: "update",
-    //     },
-    // ];
-
-
-    // deploy all three sample programs simultaneously
     const deployments: DeploymentAction[] = [
+        {
+            project: "simple-resource",
+            op: "update",
+        },
         // {
         //     project: "bucket-time",
         //     op: "update",
         // },
         // {
-        //     project: "simple-resource",
+        //     project: "lambda-template",
         //     op: "update",
         // },
-        {
-            project: "go-bucket",
-            op: "update",
-        },
+        // {
+        //     project: "go-bucket",
+        //     op: "update",
+        // },
+
     ];
 
     await execDeploymentsAndMonitorToCompletion(deployments);
-
-    // useful for debugging the driver if it happens to exit early before a deployment has finished (ie an API field changes)
-    // printStatusAndLogs("79fcd545-f9f0-4287-8c53-06072f508732")
-
 }
 run().catch(err => console.log(err));
