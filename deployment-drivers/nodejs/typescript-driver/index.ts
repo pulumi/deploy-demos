@@ -1,5 +1,5 @@
-const org = "pulumi";
-const stack = "dev"
+let org = "pulumi";
+let stack = "dev"
 const backendURL = "http://api.pulumi.com/api"
 
 type SupportedProject = "simple-resource" | "bucket-time" | "go-bucket" | "lambda-template";
@@ -309,6 +309,13 @@ const execDeploymentsAndMonitorToCompletion = async (deployments: DeploymentActi
 };
 
 const run = async () => {
+
+    // change this to your personal user or organization
+    // org = "EvanBoyle";
+    org = process.env.ORG_NAME || "pulumi";
+
+    // override this to control the stack name
+    stack = process.env.STACK_NAME || "dev";
 
     // This snippet controls which pulumi-program gets run. 
     // You can alter this to point to a different pulumi program.

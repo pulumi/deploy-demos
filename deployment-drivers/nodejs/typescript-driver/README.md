@@ -18,6 +18,8 @@ The driver expects a set of common environment variables to be exported in the s
 1. `PULUMI_ACCESS_TOKEN`: [pulumi access token ](https://www.pulumi.com/docs/intro/pulumi-service/accounts/#creating-access-tokens)
 2. `GITHUB_ACCESS_TOKEN`: [GitHub PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) (This PAT needs `repo` scope).
 3. AWS Credentials for examples that create cloud resources (`AWS_ACCESS_KEY`, etc). 
+4. `ORG_NAME`: set this variable to your pulumi username or organization name that contains your stack
+5. `STACK_NAME`: defaults to `dev`
 
 ## Running the program
 
@@ -34,6 +36,7 @@ With the stack created, you can run the deployment driver:
 $ yarn install
 $ export PULUMI_ACCESS_TOKEN=...
 $ export GITHUB_ACCESS_TOKEN=...
+$ export ORG_NAME=...
 $ # splat your AWS creds into env vars
 $ yarn start
 ```
