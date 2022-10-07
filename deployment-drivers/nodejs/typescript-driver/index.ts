@@ -2,7 +2,7 @@ let org = "pulumi";
 let stack = "dev"
 const backendURL = "http://api.pulumi.com/api"
 
-type SupportedProject = "simple-resource" | "bucket-time" | "go-bucket" | "lambda-template";
+type SupportedProject = "simple-resource" | "bucket-time" | "go-bucket" | "lambda-template" | "yamlcaml";
 type Operation = "update" | "preview" | "destroy" | "refresh";
 
 const makePulumiAPICall = async (method: string, urlSuffix: string, payload?: any) => {
@@ -58,6 +58,61 @@ const createSimpleDeployment = async (op: Operation) => {
     };
 
     return createDeployment("simple-resource", payload);
+}
+
+const createInlineYamlDeployment = async (op: Operation) => {
+    // you can define your pulumi program dynamically
+    // via YAML that we send over the wire.
+    const yamlProgram = `name: yamlcaml
+runtime: yaml
+description: A minimal AWS Pulumi YAML program
+
+resources:
+    # Create an AWS resource (S3 Bucket)
+    my-bucket:
+        type: aws:s3:Bucket
+
+outputs:
+    # Export the name of the bucket
+    bucketName: \${my-bucket.id}
+`;
+    const stackYaml = `config:
+    aws:region: us-west-2    
+`;
+    const payload = {
+        sourceContext: {
+            git: {
+                repoURL: "https://github.com/pulumi/deploy-demos.git",
+                branch: "refs/heads/main",
+                repoDir: "pulumi-programs/yamlcaml", // dummy repo. What is in here doesn't matter
+                gitAuth: {
+                    accessToken: process.env.GITHUB_ACCESS_TOKEN,
+                }
+            }
+        },
+        operationContext: {
+            operation: op,
+            preRunCommands: [
+                // the pulumi program gets written to disk via pre-run commands
+                `ls pulumi`,
+                // TODO: remove `cd` when https://github.com/pulumi/pulumi-service/issues/10428 is fixed
+                `cd pulumi/pulumi-programs/yamlcaml && echo "$YAML_PROGRAM" | base64 -d | tee Pulumi.yaml`,
+                `cd pulumi/pulumi-programs/yamlcaml && echo "$STACK_YAML" | base64 -d  | tee Pulumi.dev.yaml`,
+                `ls pulumi/pulumi-programs/yamlcaml`,
+                `cat pulumi/pulumi-programs/yamlcaml/Pulumi.yaml`
+            ],
+            environmentVariables: {
+                YAML_PROGRAM: Buffer.from(yamlProgram).toString('base64'), // pass the program as an env var
+                STACK_YAML: Buffer.from(stackYaml).toString('base64'), // pass the stack config as an env var
+                AWS_REGION: "us-west-2",
+                AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+                AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+                AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
+            }
+        }
+    };
+
+    return createDeployment("yamlcaml", payload);
 }
 
 const createAwsBucketDeployment = async (op: Operation) => {
@@ -160,6 +215,8 @@ const createProjectDeployment = async (project: SupportedProject, op: Operation 
             return createAwsGoBucketDeployment(op);
         case "lambda-template":
             return createLambdaTemplateDeployment(op);
+        case "yamlcaml":
+            return createInlineYamlDeployment(op);
         default:
             throw new Error(`unable to deploy project. unknown project: ${project}`);
     }
@@ -253,7 +310,7 @@ const queryDeployment = async (deployment: DeploymentAction) => {
         // we only have enough state about the deployment to query for logs once it reaches "running" state
         // https://github.com/pulumi/pulumi-service/issues/10266
         // https://github.com/pulumi/pulumi-service/issues/10339
-        if (deployment.status === "running" || deployment.status === "succeeded") {
+        if (deployment.status === "running" || deployment.status === "succeeded" || deployment.status === "failed" ) {
             deployment.logMarker.totalSteps = deploymentStatusResult.jobs[0].steps.length;
             const deploymentLogs = await getDeploymentLogs(deployment);
             const logs = deploymentLogs.join('');
@@ -338,7 +395,10 @@ const run = async () => {
         //     project: "go-bucket",
         //     op: "update",
         // },
-
+        // {
+        //     project: "yamlcaml",
+        //     op: "update",
+        // }
     ];
 
     await execDeploymentsAndMonitorToCompletion(deployments);
