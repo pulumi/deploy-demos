@@ -50,3 +50,4 @@ You can edit the driver to change which pulumi program gets deployed. There are 
 2. `go-bucket`: A Go program that deploys
 3. `lambda-template`: A TypeScript program that deploys an AWS Lambda.
 4. `simple-resource`: A TypeScript program that creates no cloud resources. Just to get started.
+5. `yamlcaml`: This is an empty directory. The driver dynamically injects [a pulumi YAML program](https://github.com/pulumi/deploy-demos/blob/ea2626ad8fc908baf1333aaa1b233bbfc3a33a6a/deployment-drivers/nodejs/typescript-driver/index.ts#L66) as an environment variable.
