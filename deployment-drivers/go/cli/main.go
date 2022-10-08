@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -28,17 +27,19 @@ type SourceContext struct {
 	GitInfo GitInfo `json:"git"`
 }
 type OperationContext struct {
-	Operation string `json:"operation"`
+	Operation   string            `json:"operation"`
+	Environment map[string]string `json:"environmentVariables"`
+	Commands    []string          `json:"preRunCommands"`
 }
 
-type DeployResult struct {
-	ID string `json:"id"`
-}
+// type DeployResult struct {
+// 	ID string `json:"id"`
+// }
 
-type AuthError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
+// type AuthError struct {
+// 	Code    int    `json:"code"`
+// 	Message string `json:"message"`
+// }
 
 func LogCommandOptions(cmd *kingpin.CmdClause) *string {
 	flag := cmd.Flag("id", "The deploy id to retrieve logs for").Required().String()
@@ -55,14 +56,16 @@ var (
 	stack   = app.Flag("stack", "Stack to deploy").Default("dev").String()
 	project = app.Flag("project", "Project to deploy").Required().String()
 	token   = app.Flag("token", "the Pulumi API token to use").Required().Envar("PULUMI_ACCESS_TOKEN").String()
-	debug   = app.Flag("debug", "enable debug logging").Default("true").Bool()
+	debug   = app.Flag("debug", "enable debug logging").Default("false").Bool()
 
 	requestCmd = app.Command("request", "Request a deploy")
 	// request specific flags
-	repoUrl   = requestCmd.Flag("repoUrl", "Repo url to use for deploy").Required().Envar("PULUMI_DEPLOY_REPO").String()
-	repoDir   = requestCmd.Flag("repoDir", "Directory in Git repo to deploy").Required().String()
-	operation = requestCmd.Flag("operation", "Operation to request").Default("update").String()
-	branch    = requestCmd.Flag("branch", "The git branch to deploy").Default("refs/heads/main").String()
+	repoUrl     = requestCmd.Flag("repoUrl", "Repo url to use for deploy").Required().Envar("PULUMI_DEPLOY_REPO").String()
+	repoDir     = requestCmd.Flag("repoDir", "Directory in Git repo to deploy").Required().String()
+	operation   = requestCmd.Flag("operation", "Operation to request").Default("update").String()
+	branch      = requestCmd.Flag("branch", "The git branch to deploy").Default("refs/heads/main").String()
+	environment = requestCmd.Flag("environment", "Environment variable to pass").StringMap()
+	commands    = requestCmd.Flag("prerun-commands", "Commands to run before Pulumi runs").Strings()
 
 	// logs specific flags
 	logsCmd = app.Command("logs", "Logs for a deploy")
@@ -79,11 +82,10 @@ func main() {
 
 	client := resty.New()
 
-	client.SetDebug(*debug)
-
 	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
 
 	case logsCmd.FullCommand():
+		client.SetDebug(*debug)
 		resp, err = client.R().
 			SetHeader("Accept", "application/json").
 			SetHeader("Authorization", fmt.Sprintf("token %s", *token)).
@@ -92,18 +94,16 @@ func main() {
 		fmt.Println(string(resp.Body()))
 
 	case stepLogsCmd.FullCommand():
+		client.SetDebug(*debug)
 		resp, err = client.R().
 			SetHeader("Accept", "application/json").
 			SetHeader("Authorization", fmt.Sprintf("token %s", *token)).
-			Get(fmt.Sprintf("%s/%s/%s/%s/deployments/%s/logs?step=%s&offset=0", url, *org, *project, *stack, *stepLogId, strconv.Itoa(*stepLogStep)))
+			Get(fmt.Sprintf("%s/%s/%s/%s/deployments/%s/logs?step=%s&offset=100", url, *org, *project, *stack, *stepLogId, strconv.Itoa(*stepLogStep)))
 
 		fmt.Println(string(resp.Body()))
 
 	case requestCmd.FullCommand():
-		fmt.Println("dispatching a deploy")
-
-		var response DeployResult
-
+		client.SetDebug(*debug)
 		resp, err = client.R().
 			SetBody(DeployData{
 				SourceContext: SourceContext{
@@ -114,19 +114,15 @@ func main() {
 					},
 				},
 				OperationContext: OperationContext{
-					Operation: *operation,
+					Operation:   *operation,
+					Environment: *environment,
+					Commands:    *commands,
 				}}).
-			SetResult(&response).
-			SetError(&AuthError{}).
 			SetHeader("Authorization", fmt.Sprintf("token %s", *token)).
 			SetHeader("Accept", "application/json").
 			Post(fmt.Sprintf("%s/%s/%s/%s/deployments", url, *org, *project, *stack))
 		if err != nil {
 			log.Fatalf("error creating deployment: %v", err)
-		}
-
-		if err := json.Unmarshal(resp.Body(), &response); err != nil {
-			log.Fatalf("failed unmarshalling response into: json: %v", err)
 		}
 
 		switch resp.StatusCode() {
