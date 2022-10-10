@@ -16,13 +16,15 @@ This API enables many of the same scenarios as Automation API, like platform bui
 
 - [API Docs](./docs/api-docs.md)
 - [Git Push To Deploy](./docs/git-push-to-deploy.md)
-- [Deployment Driver Sample](./deployment-drivers/nodejs/typescript-driver/README.md)
+- [Deployment Driver Sample (TypeScript)](./deployment-drivers/nodejs/typescript-driver/README.md)
+- [Deployment Driver Sample (Go)](./deployment-drivers/go/cli/README.md)
 
 ## Examples
 
 Deployment driver examples show using the Pulumi Deployment API to create deployments, monitor status, and tail logs.
 
 - [typescript-driver](./deployment-drivers/nodejs/typescript-driver/) a deployment driver written in Typescript. It can deploy Pulumi programs written in any language.
+- [Go CLI driver](./deployment-drivers/go/cli/) a deployment driver written in Typescript. It can deploy Pulumi programs written in any language.
 
 ## Pulumi Programs
 
