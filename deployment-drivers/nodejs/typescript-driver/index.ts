@@ -374,10 +374,9 @@ const run = async () => {
     // override this to control the stack name
     stack = process.env.STACK_NAME || "dev";
 
-    // This snippet controls which pulumi-program gets run. 
+    // This snippet controls which pulumi-program gets run.
     // You can alter this to point to a different pulumi program.
     // Edit the pulumi programs in the root level `/pulumi-programs` directory to create more cloud resources
-
     const deployments: DeploymentAction[] = [
         {
             project: "simple-resource",
