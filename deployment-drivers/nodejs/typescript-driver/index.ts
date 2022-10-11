@@ -312,10 +312,10 @@ const run = async () => {
 
     // change this to your personal user or organization
     // org = "EvanBoyle";
-    let org = process.env.ORG_NAME || "pulumi";
+    org = process.env.ORG_NAME || "pulumi";
 
     // override this to control the stack name
-    let stack = process.env.STACK_NAME || "dev";
+    stack = process.env.STACK_NAME || "dev";
 
     // This snippet controls which pulumi-program gets run.
     // You can alter this to point to a different pulumi program.
