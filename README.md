@@ -1,4 +1,4 @@
-> **_NOTE:_**  This is a feature in private preview, discretion is appreciated.
+> **_NOTE:_**  This is a feature in private preview. By getting access to this repository you understand not speak publically about the feature and not to discuss it with users outside of the private preview.  
 
 # Pulumi Deploy
 
