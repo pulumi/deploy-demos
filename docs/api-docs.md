@@ -3,9 +3,7 @@
 ## Preview Access
 
 Currently, the APIs that power Deployments are gated behind a `/preview` url.
-You'll need to make sure that your org has been granted access to these APIs.
-Right now the `pulumi` org has been granted, so any projects in that org should work.
-If you need additional access, please reach out to the team in the [#pulumi-deploy-beta] channel in the Pulumi Community Slack. 
+You'll need to make sure that your org has been granted access to these APIs, please reach out to the team in the [#pulumi-deploy-beta] channel in the Pulumi Community Slack with any issues or questions. 
 
 ## Create a Deployment
 
@@ -18,7 +16,15 @@ An `Operation` defines how the Pulumi project is to be executed.
 
 - **preRunCommands** (list): A list of commands to run before the Pulumi command is executed
 - **operation** (string): The Pulumi command to execute (`update`, `preview`, `refresh`, `destroy`)
-- **environmentVariables** (map[string]string: A list of environment variables to set for the operation
+- **environmentVariables** (map[string]Secret: A list of environment variables to set for the operation 
+
+Secret types have the following structure:
+```json
+  "key": {
+    "secret": "value"
+  },
+  "key": "value"
+```
 
 #### Example
 
@@ -45,13 +51,21 @@ Currently, only git repos are supported as a source.
 - **repoDir** (string): The directory to work from in the project's source repository where Pulumi.yaml is located. It is used in case Pulumi.yaml is not in the project source root
 - **commit** (string): (optional) Commit is the hash of the commit to deploy. If used, HEAD will be in detached mode. This is mutually exclusive with the Branch setting. Either value needs to be specified
 - **gitAuth** (object): (optional) GitAuth is the authentication information for the git repo. If not specified, the repo is assumed to be public. Only one type is supported at time.
-  - **accessToken** (string): The access token to use
+  - **accessToken** (secret): The access token to use
   - **sshAuth** (object): (optional) SSHAuth is the authentication information for the git repo
-    - **privateKey** (string): The private key to use
-    - **password** (string, optional): The password to use
+    - **privateKey** (secret): The private key to use
+    - **password** (secret, optional): The password to use
   - **basicAuth** (object): Basic auth information
-    - **userName** (string): The username to use for authentication
-    - **password** (string): The password to use for authentication 
+    - **userName** (secret): The username to use for authentication
+    - **password** (secret): The password to use for authentication 
+
+Secret types have the following structure:
+```json
+  "key": {
+    "secret": "value"
+  },
+  "key": "value"
+```
 
 ### Example
 
@@ -62,9 +76,11 @@ Currently, only git repos are supported as a source.
     "branch": "refs/heads/master",
     "repoDir": "aws-ts-s3-folder",
     "gitAuth": {
-      "accessToken": "myAccessToken",
+      "accessToken": {
+        "secret": "myAccessToken"
+      },
       "sshAuth": {
-        "privateKey": "myPrivateKey",
+        "privateKey": ,"myPrivateKey",
         "password": "myPassword"
       },
       "basicAuth": {

@@ -1,6 +1,4 @@
-let org = "pulumi";
-let stack = "dev"
-const backendURL = "http://api.pulumi.com/api"
+const backendURL = "http://api.steve.pulumi-dev.io/api"
 
 type SupportedProject = "simple-resource" | "bucket-time" | "go-bucket" | "lambda-template";
 type Operation = "update" | "preview" | "destroy" | "refresh";
@@ -308,16 +306,15 @@ const execDeploymentsAndMonitorToCompletion = async (deployments: DeploymentActi
     return deployments;
 };
 
+// change this to your personal user or organization
+// org = "EvanBoyle";
+let org = process.env.ORG_NAME || "pulumi";
+
+// override this to control the stack name
+let stack = process.env.STACK_NAME || "dev";
+
 const run = async () => {
-
-    // change this to your personal user or organization
-    // org = "EvanBoyle";
-    org = process.env.ORG_NAME || "pulumi";
-
-    // override this to control the stack name
-    stack = process.env.STACK_NAME || "dev";
-
-    // This snippet controls which pulumi-program gets run. 
+    // This snippet controls which pulumi-program gets run.
     // You can alter this to point to a different pulumi program.
     // Edit the pulumi programs in the root level `/pulumi-programs` directory to create more cloud resources
 

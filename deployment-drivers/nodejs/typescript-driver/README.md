@@ -30,7 +30,7 @@ $ cd ../../pulumi-programs/simple-resource
 $ pulumi stack init dev
 ```
 
-`cd` back into the deploymetn driver directory. With the stack created, you can run the deployment driver: 
+`cd` back into the deployment driver directory. With the stack created, you can run the deployment driver: 
 
 ```console
 # from /typescript-driver
