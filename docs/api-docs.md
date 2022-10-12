@@ -102,8 +102,8 @@ Finally, it will run a `pulumi update` against the stack.
 In addition to the payload, the request URL matches the `org/project/stack` like it does today, so in this example, I'm using the org `stevesloka`, with the project `aws-ts-s3-folder` and the stack `dev`.
 
 ```
-$ curl -i -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- http://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments -d '{
+curl -i -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+ --location "http://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments" -d '{
     "sourceContext": {
         "git": {
             "repoURL": "https://github.com/pulumi/examples.git",
@@ -132,8 +132,8 @@ Request details of your Deployment by querying the API at: `/api/preview/{orgNam
 
 Example: 
 ```
-$ curl -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \                              
-https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments/08a4e65c-f1f8-4b47-8f7a-cdac9788dcad
+curl -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \                              
+--location "https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments/08a4e65c-f1f8-4b47-8f7a-cdac9788dcad"
 
 {"ID":"08a4e65c-f1f8-4b47-8f7a-cdac9788dcad","Created":"2022-08-24 17:41:00.224","Modified":"2022-08-24 17:41:07.929","Status":"running"}
 ```
@@ -150,8 +150,8 @@ There are a set of query parameters which are available:
 
 Example: 
 ```
- $ curl -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- http://localhost:8080/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments?page=1&pageSize=5&status=running
+ curl -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+ --location "http://localhost:8080/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments?page=1&pageSize=5&status=running"
 ```
 
 ### Logs
@@ -177,7 +177,7 @@ First get all the steps of the Deployment, in this example there are 5 total ste
 GET Deployment/{id}
 ```
 curl -i -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- https://api.pulumi.com/api/preview/k8s/resource-test/dev/deployments/2ee5b292-28bb-44a5-8532-b6ac32f4ec49                               
+ --location "https://api.pulumi.com/api/preview/k8s/resource-test/dev/deployments/2ee5b292-28bb-44a5-8532-b6ac32f4ec49"                          
 {
     "id": "2ee5b292-28bb-44a5-8532-b6ac32f4ec49",
     "created": "2022-09-14 18:06:41.669",
@@ -230,7 +230,7 @@ Get Logs for a Deployment starting at the zero offset and a count size of 10, me
 GET Deployment/{id}/logs/{job}?step=5&count=10&offset=0
 ```
 curl -i -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- https://api.pulumi.com/api/preview/k8s/resource-test/dev/deployments/2ee5b292-28bb-44a5-8532-b6ac32f4ec49/logs/?step=5&count=10&offset=0
+ --location "https://api.pulumi.com/api/preview/k8s/resource-test/dev/deployments/2ee5b292-28bb-44a5-8532-b6ac32f4ec49/logs/?step=5&count=10&offset=0"
 
 {
     "nextOffset": 10,
@@ -281,8 +281,8 @@ curl -i -XGET -H "Content-Type: application/json" -H "Authorization: token $PULU
 
 No more logs are available, so nextOffset is missing from the response:
 ```
-$ curl -i -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- https://api.pulumi.com/api/preview/k8s/resource-test/dev/deployments/2ee5b292-28bb-44a5-8532-b6ac32f4ec49/logs/?step=5&count=10&offset=10
+curl -i -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+ --location "https://api.pulumi.com/api/preview/k8s/resource-test/dev/deployments/2ee5b292-28bb-44a5-8532-b6ac32f4ec49/logs/?step=5&count=10&offset=10"
 {
     "lines": [
         {
@@ -337,7 +337,7 @@ There are a set of query parameters which are available:
 GET Deployment/{id}/logs
 ```
 curl -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
-https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments/6b1ec06b-4f41-4cce-a7c9-13ceded14db2/logs
+--location "https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments/6b1ec06b-4f41-4cce-a7c9-13ceded14db2/logs"
 {
   "lines": [
     {
@@ -377,7 +377,7 @@ GET Deployment/{id}/logs?nextToken={token}
 ```
 ```json
 curl -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
-https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments/6b1ec06b-4f41-4cce-a7c9-13ceded14db2/logs\?nextToken\=0.2.1 | jq
+--location "https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments/6b1ec06b-4f41-4cce-a7c9-13ceded14db2/logs\?nextToken\=0.2.1" | jq
 {
   "lines": [
     {
