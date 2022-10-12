@@ -150,7 +150,7 @@ There are a set of query parameters which are available:
 
 Example: 
 ```
- $ curl -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \                                                                                                 [18:40:42]
+ $ curl -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
  http://localhost:8080/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments?page=1&pageSize=5&status=running
 ```
 
