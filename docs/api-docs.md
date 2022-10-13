@@ -103,7 +103,7 @@ In addition to the payload, the request URL matches the `org/project/stack` like
 
 ```
 curl -i -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- --location "http://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments" -d '{
+ --location "https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments" -d '{
     "sourceContext": {
         "git": {
             "repoURL": "https://github.com/pulumi/examples.git",
@@ -151,7 +151,7 @@ There are a set of query parameters which are available:
 Example: 
 ```
  curl -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- --location "http://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments?page=1&pageSize=5&status=running"
+ --location "https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments?page=1&pageSize=5&status=running"
 ```
 
 ### Logs
