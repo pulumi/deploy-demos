@@ -103,7 +103,7 @@ In addition to the payload, the request URL matches the `org/project/stack` like
 
 ```
 curl -i -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- --location "http://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments" -d '{
+ --location "https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments" -d '{
     "sourceContext": {
         "git": {
             "repoURL": "https://github.com/pulumi/examples.git",
@@ -132,7 +132,7 @@ Request details of your Deployment by querying the API at: `/api/preview/{orgNam
 
 Example: 
 ```
-curl -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \                              
+curl -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
 --location "https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments/08a4e65c-f1f8-4b47-8f7a-cdac9788dcad"
 
 {"ID":"08a4e65c-f1f8-4b47-8f7a-cdac9788dcad","Created":"2022-08-24 17:41:00.224","Modified":"2022-08-24 17:41:07.929","Status":"running"}
@@ -151,7 +151,7 @@ There are a set of query parameters which are available:
 Example: 
 ```
  curl -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- --location "http://localhost:8080/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments?page=1&pageSize=5&status=running"
+ --location "https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments?page=1&pageSize=5&status=running"
 ```
 
 ### Logs
@@ -177,7 +177,7 @@ First get all the steps of the Deployment, in this example there are 5 total ste
 GET Deployment/{id}
 ```
 curl -i -XGET -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- --location "https://api.pulumi.com/api/preview/k8s/resource-test/dev/deployments/2ee5b292-28bb-44a5-8532-b6ac32f4ec49"                          
+ --location "https://api.pulumi.com/api/preview/k8s/resource-test/dev/deployments/2ee5b292-28bb-44a5-8532-b6ac32f4ec49"
 {
     "id": "2ee5b292-28bb-44a5-8532-b6ac32f4ec49",
     "created": "2022-09-14 18:06:41.669",
