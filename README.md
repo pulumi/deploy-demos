@@ -23,8 +23,9 @@ This API enables many of the same scenarios as Automation API, like platform bui
 
 Deployment driver examples show using the Pulumi Deployment API to create deployments, monitor status, and tail logs.
 
-- [typescript-driver](./deployment-drivers/nodejs/typescript-driver/) a deployment driver written in Typescript. It can deploy Pulumi programs written in any language.
-- [Go CLI driver](./deployment-drivers/go/cli/) a deployment driver written in Typescript. It can deploy Pulumi programs written in any language.
+- [typescript-driver](./deployment-drivers/nodejs/typescript-driver/) - a deployment driver written in Typescript. It can deploy Pulumi programs written in any language.
+- [Go CLI driver](./deployment-drivers/go/cli/) - a deployment driver written in Typescript. It can deploy Pulumi programs written in any language.
+- [Stack Reaper](./pulumi-programs/stack-reaper/) - infrastructure that enables temporary stacks. Set a stack tag, run an update, and the stack automatically gets destroyed by Pulumi Deployment API after the expiration period.
 
 ## Pulumi Programs
 

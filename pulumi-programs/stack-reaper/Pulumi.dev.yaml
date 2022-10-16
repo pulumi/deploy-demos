@@ -1,0 +1,4 @@
+config:
+  aws:region: us-west-2
+  stack-reaper:pulumiAccessToken:
+    secure: AAABAEUDm+FILk+Mou2B16dDFR9wu2639ljKVhw31vp0q4Uuy5/YItk0/zj7qMo362CaXPwzi1VQ40fUjEmYm5YXZXpwrqdQtD5YXQ==

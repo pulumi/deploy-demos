@@ -1,0 +1,3 @@
+name: stack-reaper
+description: A minimal AWS TypeScript Pulumi program
+runtime: nodejs
