@@ -1,18 +1,18 @@
 # Git Push to Deploy
 
-> **_NOTE:_**  This feature is still being actively developed, expect daily improvements and modifications. In order to try it out as a beta user you will have to go through more steps than when it is launched.
+> **_NOTE:_**  This feature is still being actively developed, expect daily improvements and modifications. In order to try it out as a beta user you will have to go through more steps then at launch.
 
-You can use this feature on your Pulumi individual account or in an organization.
+You can use this feature on your Pulumi individual account or in a Pulumi organization.
 
 ## GitHub Setup
 
 ### GitHub Organization Name Requirement (Organization only)
 
-In order to use this feature your GitHub organization and Pulumi organization name need to match. Ensure they have the same name, for example the GitHub organization is named `burbsburgers` and the Pulumi organization is also named `burbsburgers`.
+In order to use this feature in a Pulumi organization your GitHub organization and Pulumi organization name need to match. Ensure they have the same name, for example the GitHub organization is named `burbsburgers` and the Pulumi organization is also named `burbsburgers`.
 
 ### GitHub Membership Requirement
 
-Currently you will need both your Pulumi account and Pulumi organization to be managed on GitHub to use this feature. To do this follow these steps:
+Currently you will need the Pulumi account, and if connecting a stack in an organization, also the Pulumi organization, to be managed on GitHub. To do this follow these steps:
 
 **Account**
 
@@ -31,7 +31,7 @@ Currently you will need both your Pulumi account and Pulumi organization to be m
 4. Select GitHub to expand the options
 5. Select the GitHub organization that matches the Pulumi organization name
 
-![org](org.png)
+<img src="org.png" alt="org" width="600"/>
 
 ### GitHub App Installation
 
