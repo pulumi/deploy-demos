@@ -1,32 +1,85 @@
-## Git Push to Deploy
+# Git Push to Deploy
 
-Warning: this area is still under construction. Reach out to Evan Boyle if you are a community beta user before proceeding.
+> **_NOTE:_**  This feature is still being actively developed, expect daily improvements and modifications. In order to try it out as a beta user you will have to go through more steps than when it is launched.
 
-## GitHub App Installation
+You can use this feature on your Pulumi individual account or in an organization.
 
-You'll need to install and configure the [Pulumi GitHub App](https://github.com/apps/pulumi). It requires read access to your repos so it can clone pulumi programs and listent to merge commit listeneres to automatically trigger deployments on `git push`.
+## GitHub Setup
 
-## Enable the Deployment Configuration UI
+### GitHub Organization Name Requirement (Organization only)
 
-Navigate to app.pulumi.com and select a stack that you'd like to configure for Deploy. You'll need to open up the javascript debug console and enable the feature (this step will go away soon): 
+In order to use this feature your GitHub organization and Pulumi organization name need to match. Ensure they have the same name, for example the GitHub organization is named `burbsburgers` and the Pulumi organization is also named `burbsburgers`.
 
-```js
-localStorage.setItem("internal-preview-enabled-465517", true);
-```
+### GitHub Membership Requirement
 
-Hit enter and refresh the page. Navigate to `https://app.pulumi.com/{orgOrUser}/{project}/{stack}/settings/environment` to configure your stack.
+Currently you will need both your Pulumi account and Pulumi organization to be managed on GitHub to use this feature. To do this follow these steps:
 
-### Configuring a GitHub Repo
+**Account**
 
-You will need to use the GitHub GraphQL explorer to pull your repo ID (better in-product support coming soon) 
-Get your repo’s ID
+1. Ensure your Pulumi account is selected in the top left drop-down
+2. Navigate to Settings > General
+3. Under Identities select Connect to GitHub
+4. Go through the flow to connect to GitHub
 
+![account](account.png)
 
-https://docs.github.com/en/graphql/overview/explorer 
-```
-{
-  repository(owner: "pulumi", name: "home") {
-    databaseId
-  }
-}
-```
+**Organization**
+
+1. Ensure the desired Pulumi organization is selected in the Organization drop-down
+2. Navigate to Settings > Access Management
+3. Select the Change requirements button
+4. Select GitHub to expand the options
+5. Select the GitHub organization that matches the Pulumi organization name
+
+![org](org.png)
+
+### GitHub App Installation
+
+You'll need to install and configure the [Pulumi GitHub App](https://github.com/apps/pulumi). It requires read access to your repos so it can clone Pulumi programs and listen to merge commits to automatically trigger deployments on `git push`. Follow these steps:
+
+**Organization **
+
+1. Ensure the Pulumi organization that matches the GitHub organization is selected in the Organization drop-down
+2. Navigate to Settings > Integrations
+3. Select the Install the Pulumi GitHub App button
+  
+![gha-install](gha-install.png)
+
+4. You will be directed to GitHub, select the GitHub organization that matches the Pulumi organization name
+5. Select the repos (or all repos) and then Install 
+6. Return to app.pulumi.com and ensure the GitHub App is installed
+
+![gha-installed](gha-installed.png)
+
+** Account **
+
+1. Navigate to Settings > Integrations with your individual account selected from the dropdown
+2. Select the Install the Pulumi GitHub App button
+  
+![gha-install](gha-install.png)
+
+1. You will be directed to GitHub, select your GitHub username
+2. Select the repos (or all repos) and then Install
+3. Return to app.pulumi.com and ensure the GitHub App is installed
+
+![gha-installed](gha-installed.png)
+
+## Deployment Settings
+
+### GitHub Configuration
+
+We need your GitHub repo and branch in order to connect a stack to Pulumi Deployments. Follow these steps to get a Deployment running:
+
+1. Navigate to a stack you want to connect to Pulumi Deployments.
+2. Go to Settings > Deploy
+3. Select the GitHub Repository with source context for Pulumi to Deploy
+4. Select the branch
+5. Ensure you have the required Environment Variables to run your repository
+
+### Create a Deployment
+
+You can now create a Deployment by using the Deploy Actions buttons or by pushing a commit to a GitHub pull request. If the Deploy Actions drop-down is not appearing on your stack page, try refreshing the page.
+
+![deploy-actions](deploy-actions.png)
+
+If you have any questions at all, please reach out in the #pulumi-deploy-beta Slack channel.
