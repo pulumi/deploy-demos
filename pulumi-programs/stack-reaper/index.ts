@@ -5,7 +5,6 @@ import * as pulumi from "@pulumi/pulumi";
 import fetch from "node-fetch";
 
 import * as crypto from "crypto";
-import { json } from "stream/consumers";
 
 const config = new pulumi.Config();
 
@@ -102,10 +101,10 @@ runtime: nodejs
                     preRunCommands: [
                         // the pulumi program gets written to disk via pre-run commands
                         // TODO: remove `cd` when https://github.com/pulumi/pulumi-service/issues/10428 is fixed
-                        `cd pulumi/aws-go-lambda && echo "$YAML_PROGRAM" | base64 -d | tee Pulumi.yaml`,
-                        `cd pulumi/aws-go-lambda && pulumi stack select ${organization}/${stack} && pulumi config refresh`,
-                        `ls pulumi/aws-go-lambda`,
-                        `cat pulumi/aws-go-lambda/Pulumi.yaml`
+                        `echo "$YAML_PROGRAM" | base64 -d | tee Pulumi.yaml`,
+                        `pulumi stack select ${organization}/${stack} && pulumi config refresh`,
+                        `ls`,
+                        `cat Pulumi.yaml`
                     ],
                     environmentVariables: {
                         YAML_PROGRAM: Buffer.from(yamlProgram).toString('base64'), // pass the program as an env var

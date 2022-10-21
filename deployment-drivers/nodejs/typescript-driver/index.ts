@@ -96,10 +96,10 @@ outputs:
                 // the pulumi program gets written to disk via pre-run commands
                 `ls pulumi`,
                 // TODO: remove `cd` when https://github.com/pulumi/pulumi-service/issues/10428 is fixed
-                `cd pulumi/pulumi-programs/yamlcaml && echo "$YAML_PROGRAM" | base64 -d | tee Pulumi.yaml`,
-                `cd pulumi/pulumi-programs/yamlcaml && echo "$STACK_YAML" | base64 -d  | tee Pulumi.dev.yaml`,
-                `ls pulumi/pulumi-programs/yamlcaml`,
-                `cat pulumi/pulumi-programs/yamlcaml/Pulumi.yaml`
+                `echo "$YAML_PROGRAM" | base64 -d | tee Pulumi.yaml`,
+                `echo "$STACK_YAML" | base64 -d  | tee Pulumi.dev.yaml`,
+                `ls`,
+                `cat Pulumi.yaml`
             ],
             environmentVariables: {
                 YAML_PROGRAM: Buffer.from(yamlProgram).toString('base64'), // pass the program as an env var

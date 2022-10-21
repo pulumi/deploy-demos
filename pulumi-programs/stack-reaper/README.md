@@ -33,7 +33,7 @@ $ pulumi up
 
     ```bash
     pulumi config set aws:region us-west-2
-    pulumi config set pulumiAccessToken xxxxxxxxxxxxxxxxx # your access token value
+    pulumi config set --secret pulumiAccessToken xxxxxxxxxxxxxxxxx # your access token value
     ```
 
 1. Execute the Pulumi program:
