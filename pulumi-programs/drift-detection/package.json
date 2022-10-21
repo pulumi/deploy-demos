@@ -1,0 +1,14 @@
+{
+    "name": "drift-detection",
+    "main": "index.ts",
+    "devDependencies": {
+        "@types/node": "^14"
+    },
+    "dependencies": {
+        "2": "^3.0.0",
+        "@pulumi/aws": "^5.18.0",
+        "@pulumi/pulumi": "^3.0.0",
+        "@types/node-fetch": "^2.6.2",
+        "node-fetch": "^2.6.2"
+    }
+}
