@@ -26,7 +26,11 @@ If this page says you already have the app installed, you can stop here. If the 
 
 ![gha-installed](gha-installed.png)
 
-If you installed the GitHub app in the past and the steps above aren't showing it as installed for your desired organization, please uninstall the app (via github.com) and re-install it following the steps above. **Note:** Uninstalling the app will delete any push-to-deploy configurations you may have already setup.
+If you installed the GitHub app in the past and the steps above aren't showing it as installed for your desired organization, please try the following:
+1. Ensure you're a GitHub admin of the GitHub organization where you're installing the app.
+2. Uninstall the app (via github.com) and re-install it following the steps above.
+
+**Note:** Uninstalling the app will delete any push-to-deploy configurations you may have already setup.
 
 ## Deployment Settings
 
