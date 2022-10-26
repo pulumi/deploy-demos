@@ -1,5 +1,5 @@
 {
-    "name": "stack-reaper",
+    "name": "ttl-stacks",
     "main": "index.ts",
     "devDependencies": {
         "@types/node": "^18.7.13"

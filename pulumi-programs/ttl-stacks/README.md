@@ -1,12 +1,14 @@
-# Stack Reaper
+# TTL stacks
 
-The stack reaper is a piece of infrastructure that allows you to set a stack tag that triggers automatic destroy via the Pulumi Deployment API after the expiration time passes.
+The TTL stack processor is a piece of infrastructure that allows you to set a stack tag that triggers automatic destroy via the Pulumi Deployment API after the expiration time passes. This enables temporary development infrastructure.
+
+Infrastructure waste is a common problem. It’s too easy to leave development infrastructure running accidentally and end up with a huge bill. Many companies have entire teams devoted to solving this problem.
 
 After deploying this program you can do the following on any program in your pulumi organization:
 
 ```console
 # on any stack in your organization
-$ pulumi stack tag set reap 30 # minutes to wait until destroying the stack
+$ pulumi stack tag set ttl 30 # minutes to wait until destroying the stack
 $ pulumi up 
 # 30 minutes later the stack will be cleaned up via the Pulumi Deployment API
 ```
@@ -50,4 +52,11 @@ $ pulumi up
 
 1. Create a [Pulumi webhook](https://www.pulumi.com/docs/intro/console/extensions/webhooks/). Use the output from the previous step as the `Payload URL`.
 
-You should now be able to `pulumi stack tag set reap X && pulumi up` (X=minutes) to create stacks that destroy themselves after the specified expiry.
+You should now be able to `pulumi stack tag set ttl X && pulumi up` (X=minutes) to create stacks that destroy themselves after the specified expiry.
+
+
+## Architecture
+
+This stack uses 
+
+![](./ttl-stacks-architecture.png)

@@ -43,7 +43,7 @@ function authenticateRequest(req: awsx.apigateway.Request): awsx.apigateway.Resp
     return undefined;
 }
 
-type ReaperMessage = {
+type ttlMessage = {
     organization: string;
     project: string;
     stack: string;
@@ -51,14 +51,14 @@ type ReaperMessage = {
 }
 
 // the queue for scheduling stack deletion
-const queue = new aws.sqs.Queue("reaper-queue", {
+const queue = new aws.sqs.Queue("ttl-queue", {
     visibilityTimeoutSeconds: 181, // TODO: tighten this up as well as lambda timeout
 });
 
 // this processor looks for messages in the queue one at a time that have passed their expiry.
 // if a message has not passed it's expriy, then it throws an error so the message gets retried.
 // expired messages trigger destroy operations via the pulumi deployment api.
-queue.onEvent("reaper-queue-processor", async (e) => {
+queue.onEvent("ttl-queue-processor", async (e) => {
     console.log("queue processor running");
     const messagesToRetry = [];
     for (let rec of e.Records) {
@@ -141,10 +141,10 @@ runtime: nodejs
 });
 
 /**
- * the reaper webhook processes all stack updates, looks up "reap" tags, and schedules corresponding stacks for deletion
+ * the ttl webhook processes all stack updates, looks up "ttl" tags, and schedules corresponding stacks for deletion
  * via messages in an SQS queue
  */
-const webhookHandler = new awsx.apigateway.API("reaper-webhook-handler", {
+const webhookHandler = new awsx.apigateway.API("ttl-webhook-handler", {
     restApiArgs: {
         binaryMediaTypes: ["application/json"],
     },
@@ -201,16 +201,16 @@ const webhookHandler = new awsx.apigateway.API("reaper-webhook-handler", {
                 }
 
                 const stackResult = await response.json();
-                const reapTag = (stackResult as any)?.tags?.reap;
-                if (!reapTag) {
-                    console.log(`no reap tag found for stack: ${organization}/${project}/${stack}!\n`)
+                const ttlTag = (stackResult as any)?.tags?.ttl;
+                if (!ttlTag) {
+                    console.log(`no ttl tag found for stack: ${organization}/${project}/${stack}!\n`)
                     return { statusCode: 200, body: `noop for stack ${organization}/${project}/${stack}!\n` };
                 }
 
-                console.log(`reap tag found for stack, queueing SQS message: ${organization}/${project}/${stack}!\n`)
+                console.log(`ttl tag found for stack, queueing SQS message: ${organization}/${project}/${stack}!\n`)
 
                 let time = new Date();
-                const expirationMinutes = parseInt(reapTag) || 30;
+                const expirationMinutes = parseInt(ttlTag) || 30;
                 time = new Date(time.getTime() + 60000 * expirationMinutes);
 
                 const message = {
