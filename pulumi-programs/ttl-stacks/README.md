@@ -57,6 +57,6 @@ You should now be able to `pulumi stack tag set ttl X && pulumi up` (X=minutes) 
 
 ## Architecture
 
-This stack uses 
+The TTL processor uses an event-driven architecture. The Pulumi Service sends events to the TTL processor via a webhook. When the lambda observes an update with a `ttl` tag, it calculates and expiration time and queues the stack for cleanup. The cleanup lambda polls from the queue looking for expired stacks, and runs a `pulumi destroy` via the Deployments REST API in the Pulumi Service.
 
 ![](./ttl-stacks-architecture.png)
