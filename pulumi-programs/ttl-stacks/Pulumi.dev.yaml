@@ -1,6 +1,0 @@
-config:
-  aws:region: us-west-2
-  ttlstacks:githubToken:
-    secure: AAABAHtQA1KxZ3dqKUIh11TNyfas+vJxfASDzlpbuwRpP6UCnHONDEvd/P2V8kJu5nAVjRhYyPBOmC06tyW+tL9DcL4lgXjS
-  ttlstacks:pulumiAccessToken:
-    secure: AAABALPgH6Vxjw9qEL55mHNqu2QzAhVsGSQZo5bYGtMGBg18Ukth+oq1CQl1ZChTaPdJiGfdHbo8DyAG/SVhYNahUgfdCxKXCZUzsg==

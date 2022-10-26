@@ -1,3 +1,0 @@
-name: ttlstacks
-description: Clean up resources that are past their TTL
-runtime: nodejs
