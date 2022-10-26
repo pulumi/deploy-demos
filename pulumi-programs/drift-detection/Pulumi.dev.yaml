@@ -4,4 +4,4 @@ config:
     secure: AAABAIqRHe58Aqz9Qj7Nb6CbFPhJbm0ASfG8uK8PcROQixEzj05w6LO2mG+V26LXGZY5cb/e951wCzJQ8QrFwXPOmRV0/SknbR6nng==
   drift-detection:stacks:
   - pulumi/simple-resource/dev
-  - pulumi/bucket-time/dev
+  - pulumi/aws-ts-s3/dev
