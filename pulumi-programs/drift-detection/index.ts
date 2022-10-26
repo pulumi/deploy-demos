@@ -10,7 +10,6 @@ let stacks: string[] = c.requireObject("stacks");
 let pulumiAccessToken = c.requireSecret("pulumiAccessToken");
 
 // TODO: need to increase the timeout of this handler
-// TODO: does this lambda need a wider role to be able to read more infra?
  aws.cloudwatch.onSchedule("drift-lambda", schedule, async() => {
     let outstandingDeploymentIDs: string[] = [];
     let deploymentToStack: {[key: string]: string}= {};
