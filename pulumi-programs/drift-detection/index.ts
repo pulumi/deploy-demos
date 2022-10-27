@@ -9,7 +9,6 @@ let schedule = c.get("schedule") || "cron(0/5 * * * ? *)";
 let stacks: string[] = c.requireObject("stacks");
 let pulumiAccessToken = c.requireSecret("pulumiAccessToken");
 
-// TODO: need to increase the timeout of this handler
  aws.cloudwatch.onSchedule("drift-lambda", schedule, async() => {
     let outstandingDeploymentIDs: string[] = [];
     let deploymentToStack: {[key: string]: string}= {};
@@ -59,7 +58,6 @@ runtime: yaml
                     AWS_REGION: "us-west-2",
                     // pass in environment variables available in the current lambda execution role to destroy the target program
                     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
-                    AWS_ACCESS_KEY: { secret: process.env.AWS_ACCESS_KEY }, 
                     AWS_SECRET_ACCESS_KEY: {
                         secret: process.env.AWS_SECRET_ACCESS_KEY,
                     },
