@@ -1,6 +1,8 @@
-> **_NOTE:_**  This is a feature in private preview. By getting access to this repository you understand not to speak publicly about the feature and not to discuss it with users outside of the private preview.  
+> **_NOTE:_**  This is a feature in private preview. By getting access to this repository you understand not to speak publicly about the feature and not to discuss it with users outside of the private preview.
 
 # Pulumi Deployments
+
+## Introduction
 
 Pulumi Deployments is a new product to power infrastructure and platform automation. It consists of three components:
 
@@ -11,7 +13,9 @@ Pulumi Deployments is a new product to power infrastructure and platform automat
 
 A deployment in the Pulumi Service runs on an isolated, single use deployment runner (a virtual machine). That runner will prepare the runtime environment, clone source code, set up any necessary environment variables, run the Pulumi program, and handle reporting logs and status back to the Pulumi Service.
 
-This API enables many of the same scenarios as Automation API, like platform building, self-service infrastructure, customer infrastructure workflows and portals, and more. The main difference is that Automation API programs run on your hardware, where you're responsible for handling asynchrony, workflow, reporting status, cancellatios, etc. The Pulumi Deployment API takes care of workflow for you, providing API endpoints to monitor deployments, tail update logs, queue deployments, and cancel deployments. 
+This API enables many of the same scenarios as Automation API, like platform building, self-service infrastructure, customer infrastructure workflows and portals, and more. The main difference is that Automation API programs run on your hardware, where you're responsible for handling asynchrony, workflow, reporting status, cancellations, etc. The Pulumi Deployment API takes care of workflow for you, providing API endpoints to monitor deployments, tail update logs, queue deployments, and cancel deployments.
+
+[![Watch the introduction video](pd_youtube_preview_image.png)](https://www.youtube.com/watch?v=v48U7CNWutc&ab_channel=PulumiTV)
 
 ## Docs
 
@@ -34,4 +38,5 @@ Deployment driver examples show using the Pulumi Deployment API to create deploy
 We have a set of demo Pulumi programs that can be conveniently referenced as git source within this repo. They can be found in the [pulumi-programs](./pulumi-programs/) directory.
 
 ## Share feedback
+
 We are really excited to start garnering feedback on Pulumi Deploy from users. Please feel free to open an issue in this repo for enhancements or bugs or ask to be invited to the private #pulumi-deploy-beta Slack channel to ask us questions.
