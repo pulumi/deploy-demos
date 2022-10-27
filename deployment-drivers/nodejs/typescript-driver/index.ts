@@ -95,7 +95,6 @@ outputs:
             preRunCommands: [
                 // the pulumi program gets written to disk via pre-run commands
                 `ls pulumi`,
-                // TODO: remove `cd` when https://github.com/pulumi/pulumi-service/issues/10428 is fixed
                 `echo "$YAML_PROGRAM" | base64 -d | tee Pulumi.yaml`,
                 `echo "$STACK_YAML" | base64 -d  | tee Pulumi.dev.yaml`,
                 `ls`,

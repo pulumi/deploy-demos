@@ -103,27 +103,31 @@ In addition to the payload, the request URL matches the `org/project/stack` like
 
 ```
 curl -i -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
- --location "https://api.pulumi.com/api/preview/stevesloka/aws-ts-s3-folder/dev/deployments" -d '{
-    "sourceContext": {
-        "git": {
-            "repoURL": "https://github.com/pulumi/examples.git",
-            "branch": "refs/heads/master",
-            "repoDir": "aws-ts-s3-folder"
-        }
-    },
-    "operationContext": {
-        "operation": "update",
-        "preRunCommands": [
-            "echo \"hello world\""
-        ],
-        "environmentVariables": {
-            "AWS_REGION": "us-west-2",
-            "AWS_ACCESS_KEY_ID": "<id>",
-            "AWS_SECRET_ACCESS_KEY": "<key>",
-            "AWS_SESSION_TOKEN": "<token>"
-        }
-    }
+--location "https://api.pulumi.com/api/preview/pulumi/aws-ts-s3/dev/deployments" \
+-d '{
+   "sourceContext": {
+       "git": {
+           "repoURL": "https://github.com/pulumi/deploy-demos.git",
+           "branch": "refs/heads/demo",
+           "repoDir": "pulumi-programs/aws-ts-s3",
+           "gitAuth": {
+               "accessToken": "'"$GITHUB_ACCESS_TOKEN"'"
+           }
+       }
+   },
+   "operationContext": {
+       "operation": "update",
+       "preRunCommands": [
+       ],
+       "environmentVariables": {
+           "AWS_REGION": "us-west-2",
+           "AWS_ACCESS_KEY_ID": "'"$AWS_ACCESS_KEY_ID"'",
+           "AWS_SECRET_ACCESS_KEY": "'"$AWS_SECRET_ACCESS_KEY"'",
+           "AWS_SESSION_TOKEN": "'"$AWS_SESSION_TOKEN"'"
+       }
+   }
 }'
+
 ```
 
 ### Get Deployment 

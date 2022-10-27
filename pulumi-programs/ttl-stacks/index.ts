@@ -100,7 +100,6 @@ runtime: nodejs
                     operation: "destroy",
                     preRunCommands: [
                         // the pulumi program gets written to disk via pre-run commands
-                        // TODO: remove `cd` when https://github.com/pulumi/pulumi-service/issues/10428 is fixed
                         `echo "$YAML_PROGRAM" | base64 -d | tee Pulumi.yaml`,
                         `pulumi stack select ${organization}/${stack} && pulumi config refresh`,
                         `ls`,
@@ -131,8 +130,9 @@ runtime: nodejs
         }
 
         messagesToRetry.push({ "itemIdentifier": rec.messageId });
-        // if we're not past the expiry, we'll just throw an error so the message gets reprocessed
-        // TODO: should return partial batch success pending https://github.com/pulumi/pulumi-aws/issues/2048
+        // if we're not past the expiry, we'll just throw an error so the message gets reprocessed.
+        // TODO: we should process more than one message per run and 
+        // should return partial batch success pending https://github.com/pulumi/pulumi-aws/issues/2048
         throw new Error(`waitng until ${expiration} to destroy stack ${organization}/${project}/${stack}!\n`)
     }
 }, {
