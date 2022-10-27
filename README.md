@@ -15,6 +15,7 @@ A deployment in the Pulumi Service runs on an isolated, single use deployment ru
 
 This API enables many of the same scenarios as Automation API, like platform building, self-service infrastructure, customer infrastructure workflows and portals, and more. The main difference is that Automation API programs run on your hardware, where you're responsible for handling asynchrony, workflow, reporting status, cancellations, etc. The Pulumi Deployment API takes care of workflow for you, providing API endpoints to monitor deployments, tail update logs, queue deployments, and cancel deployments.
 
+**Watch the introduction video by clicking below**
 [![Watch the introduction video](pd_youtube_preview_image.png)](https://www.youtube.com/watch?v=v48U7CNWutc&ab_channel=PulumiTV)
 
 ## Docs
