@@ -1,0 +1,4 @@
+config:
+  aws:region: us-west-2
+  ttl-stacks:pulumiAccessToken:
+    secure: AAABAO88TZ4G8cMOOl4mkD87NIKsmBVWnPeYBUSFFArTEew/qQDSQKrhyG7HYlOrVYsQ+N1VCRSPCIrwPUB8jqINTouL4r4r6x1Jlw==
