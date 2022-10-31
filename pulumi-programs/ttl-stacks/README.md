@@ -50,16 +50,6 @@ $ pulumi up
     pulumi up
     ```
 
-1. Retrieve our new URL:
-
-    ```bash
-    pulumi stack output url
-    ```
-
-1. Create a [Pulumi
-   webhook](https://www.pulumi.com/docs/intro/console/extensions/webhooks/).
-   Use the output from the previous step as the `Payload URL`.
-
 You should now be able to `pulumi stack tag set ttl X && pulumi up` (X=minutes)
 to create stacks that destroy themselves after the specified expiry.
 

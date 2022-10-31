@@ -8,6 +8,8 @@
     "@pulumi/aws": "^5.0.0",
     "@pulumi/awsx": "^0.40.0",
     "@pulumi/pulumi": "^3.45.0",
+    "@pulumi/pulumiservice": "^0.1.8",
+    "@pulumi/random": "^4.8.2",
     "@types/node-fetch": "^2.6.2",
     "node-fetch": "2"
   }

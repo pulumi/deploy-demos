@@ -1,7 +1,11 @@
 import * as aws from "@pulumi/aws";
 import * as awsx from "@pulumi/awsx";
 import * as pulumi from "@pulumi/pulumi";
+import * as service from "@pulumi/pulumiservice";
+import * as random from "@pulumi/random";
 import fetch from "node-fetch";
+
+var automation = require("@pulumi/pulumi/automation");
 
 import * as crypto from "crypto";
 
@@ -10,7 +14,7 @@ const config = new pulumi.Config();
 const stackConfig = {
   // Webhook secret used to authenticate messages. Must match the value on the
   // webhook's settings.
-  sharedSecret: config.get("sharedSecret"),
+  sharedSecret: new random.RandomString("shared-secret", { length: 16 }),
   pulumiAccessToken: config.requireSecret("pulumiAccessToken"),
 };
 
@@ -39,7 +43,10 @@ function authenticateRequest(
     req.body!.toString(),
     req.isBase64Encoded ? "base64" : "utf8"
   );
-  const hmacAlg = crypto.createHmac("sha256", stackConfig.sharedSecret);
+  const hmacAlg = crypto.createHmac(
+    "sha256",
+    stackConfig.sharedSecret.result.get()
+  );
   const hmac = hmacAlg.update(payload).digest("hex");
 
   const result = crypto.timingSafeEqual(
@@ -103,7 +110,7 @@ queue.onEvent(
         );
 
         const stackToDestroy =
-          await pulumi.automation.RemoteWorkspace.createOrSelectStack(
+          await automation.RemoteWorkspace.createOrSelectStack(
             {
               stackName: stack,
               url: "https://github.com/pulumi/deploy-demos.git",
@@ -135,6 +142,7 @@ queue.onEvent(
       }
 
       messagesToRetry.push({ itemIdentifier: rec.messageId });
+
       // if we're not past the expiry, we'll just throw an error so the message
       // gets reprocessed. TODO: we should process more than one message per
       // run and should return partial batch success pending
@@ -270,6 +278,14 @@ const webhookHandler = new awsx.apigateway.API("ttl-webhook-handler", {
       },
     },
   ],
+});
+
+const webhook = new service.Webhook("stack-ttl-webhook", {
+  payloadUrl: webhookHandler.url,
+  active: true,
+  displayName: "stack-ttl-webhook",
+  organizationName: "pulumi",
+  secret: stackConfig.sharedSecret.result,
 });
 
 export const url = webhookHandler.url;
