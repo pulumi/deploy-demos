@@ -1,8 +1,12 @@
 # Drift Detection
 
-The drift detection stack is a piece of infrastructure that repeatedly runs refreshes on your infrastructure via the Pulumi Deployment API to detect when your desired infrastructure state has diverged from the reality in production.
+The drift detection stack is a piece of infrastructure that repeatedly runs
+refreshes on your infrastructure via the Pulumi Deployment API to detect when
+your desired infrastructure state has diverged from the reality in production.
 
-Drift detection can alert you to situations where someone has made manual edits to infra via the AWS console, without syncing up those changes in the Pulumi program.
+Drift detection can alert you to situations where someone has made manual edits
+to infra via the AWS console, without syncing up those changes in the Pulumi
+program.
 
 ![](./drift-detection.png)
 
@@ -14,7 +18,8 @@ Drift detection can alert you to situations where someone has made manual edits 
     npm install
     ```
 
-1. Create a new Pulumi stack, which is an isolated deployment target for this example:
+1. Create a new Pulumi stack, which is an isolated deployment target for this
+   example:
 
     ```bash
     pulumi stack init
@@ -22,7 +27,7 @@ Drift detection can alert you to situations where someone has made manual edits 
 
 1. Set required configuration
 
-    Using the pulumi deployment API requires a [pulumi access token](https://www.pulumi.com/docs/intro/pulumi-service/accounts/#access-tokens). 
+    Using the pulumi deployment API requires a [pulumi access token](https://www.pulumi.com/docs/intro/pulumi-service/accounts/#access-tokens).
 
     ```bash
     pulumi config set aws:region us-west-2
