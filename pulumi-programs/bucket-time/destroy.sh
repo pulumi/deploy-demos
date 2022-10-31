@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 curl -i -XPOST -L "https://api.pulumi.com/api/preview/pulumi/bucket-time/ced/deployments" \
   -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
@@ -9,7 +8,10 @@ curl -i -XPOST -L "https://api.pulumi.com/api/preview/pulumi/bucket-time/ced/dep
             \"git\": {
               \"repoURL\": \"https://github.com/pulumi/deploy-demos\",
               \"branch\": \"refs/heads/ced\",
-              \"repoDir\": \"pulumi-programs/bucket-time\"
+              \"repoDir\": \"pulumi-programs/bucket-time\",
+              \"gitAuth\": {
+                \"accessToken\": \"$GITHUB_ACCESS_TOKEN\"
+              }
             }
           },
           \"operationContext\": {

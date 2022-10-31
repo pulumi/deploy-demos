@@ -1,5 +1,5 @@
-import * as awsx from "@pulumi/awsx";
 import * as aws from "@pulumi/aws";
+import * as awsx from "@pulumi/awsx";
 import * as pulumi from "@pulumi/pulumi";
 import fetch from "node-fetch";
 
@@ -101,58 +101,30 @@ queue.onEvent(
         console.log(
           `stack has expired, scheduling destroy: ${organization}/${project}/${stack}\n`
         );
-        const url = `https://api.pulumi.com/api/preview/${organization}/${project}/${stack}/deployments`;
-        const headers = {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `token ${stackConfig.pulumiAccessToken.get()}`,
-        };
 
-        const stack2 = await RemoteWorkspace.createOrSelectStack(
-          {
-            stackName: "foo",
-            url: "https://github.com/pulumi/examples.git",
-            branch: "refs/heads/master",
-            projectPath: "foo",
-          },
-          {
-            envVars: {
-              AWS_REGION: "us-west-2",
-              AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ?? "",
-              AWS_SECRET_ACCESS_KEY: {
-                secret: process.env.AWS_SECRET_ACCESS_KEY ?? "",
-              },
-              AWS_SESSION_TOKEN: {
-                secret: process.env.AWS_SESSION_TOKEN ?? "",
-              },
+        const stackToDestroy =
+          await pulumi.automation.RemoteWorkspace.createOrSelectStack(
+            {
+              stackName: stack,
+              url: "https://github.com/pulumi/deploy-demos.git",
+              branch: "refs/heads/ced",
+              projectPath: `pulumi-programs/${stack}`,
             },
-          }
-        );
+            {
+              envVars: {
+                AWS_REGION: "us-west-2",
+                AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ?? "",
+                AWS_SECRET_ACCESS_KEY: {
+                  secret: process.env.AWS_SECRET_ACCESS_KEY ?? "",
+                },
+                AWS_SESSION_TOKEN: {
+                  secret: process.env.AWS_SESSION_TOKEN ?? "",
+                },
+              },
+            }
+          );
 
-        // The Pulumi.yaml file is necessary for pulumi stack yaml
-        const yamlProgram = `name: ${project}
-runtime: nodejs
-`;
-
-        const payload = {
-          operationContext: {
-            operation: "destroy",
-            environmentVariables: {
-              YAML_PROGRAM: Buffer.from(yamlProgram).toString("base64"), // pass the program as an env var
-              AWS_REGION: "us-west-2",
-              // pass in environment variables available in the current lambda execution role to destroy the target program
-              AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
-              AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
-              AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
-            },
-          },
-        };
-
-        await fetch(url, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(payload),
-        });
+        stackToDestroy.destroy();
 
         console.log(`destroy queued: ${organization}/${project}/${stack}\n`);
 
