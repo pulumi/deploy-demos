@@ -5,11 +5,13 @@ import * as service from "@pulumi/pulumiservice";
 import * as random from "@pulumi/random";
 import fetch from "node-fetch";
 
-var automation = require("@pulumi/pulumi/automation");
-
 import * as crypto from "crypto";
 
 const config = new pulumi.Config();
+
+const image = awsx.ecr.buildAndPushImage("stack-ttl", {
+  context: "./app",
+});
 
 const stackConfig = {
   // Webhook secret used to authenticate messages. Must match the value on the
@@ -84,74 +86,25 @@ const queue = new aws.sqs.Queue("ttl-queue", {
 // operations via the pulumi deployment api.
 queue.onEvent(
   "ttl-queue-processor",
-  async (e) => {
-    console.log("queue processor running");
-    const messagesToRetry = [];
-    for (let rec of e.Records) {
-      const message = JSON.parse(rec.body);
-      const organization = message.organization;
-      const project = message.project;
-      const stack = message.stack;
-      const expiration = new Date(message.expiration);
-      const now = new Date();
-      console.log(
-        `processing message with expiration ${expiration} for stack ${organization}/${project}/${stack}\n`
-      );
+  new aws.lambda.Function("ttl-queue-processor", {
+    packageType: "Image",
+    imageUri: image.imageValue,
+    role: aws.types.enums.iam.ManagedPolicy.AWSLambdaBasicExecutionRole,
+    // layers: [
+    //   new aws.lambda.LayerVersion("secrets", {
 
-      // if we're already past the expiry, then schedule a destroy for the
-      // stack. we'll pass in the ambiently available lambda environment
-      // variables to the deployment. in addition, we'll do some additional
-      // work to set up a "dummy" directory with a `pulumi.yaml` file needed
-      // for the destory, and run a pulumi refresh to hydrate the last applied
-      // config
-      if (expiration < now) {
-        console.log(
-          `stack has expired, scheduling destroy: ${organization}/${project}/${stack}\n`
-        );
-
-        const stackToDestroy =
-          await automation.RemoteWorkspace.createOrSelectStack(
-            {
-              stackName: stack,
-              url: "https://github.com/pulumi/deploy-demos.git",
-              branch: "refs/heads/ced",
-              projectPath: `pulumi-programs/${stack}`,
-            },
-            {
-              envVars: {
-                AWS_REGION: "us-west-2",
-                AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ?? "",
-                AWS_SECRET_ACCESS_KEY: {
-                  secret: process.env.AWS_SECRET_ACCESS_KEY ?? "",
-                },
-                AWS_SESSION_TOKEN: {
-                  secret: process.env.AWS_SESSION_TOKEN ?? "",
-                },
-              },
-            }
-          );
-
-        stackToDestroy.destroy();
-
-        console.log(`destroy queued: ${organization}/${project}/${stack}\n`);
-
-        // continue to the next message (right now it is one message per
-        // batch); if we make it through the loop without error, then the batch
-        // is marked as complete an will not be retried.
-        continue;
-      }
-
-      messagesToRetry.push({ itemIdentifier: rec.messageId });
-
-      // if we're not past the expiry, we'll just throw an error so the message
-      // gets reprocessed. TODO: we should process more than one message per
-      // run and should return partial batch success pending
-      // https://github.com/pulumi/pulumi-aws/issues/2048
-      throw new Error(
-        `waitng until ${expiration} to destroy stack ${organization}/${project}/${stack}!\n`
-      );
-    }
-  },
+    //   }),
+    // ]
+    environment: {
+      variables: {
+        AWS_REGION: "us-west-2",
+        // TODO: LayerVersion these secrets
+        AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || "",
+        AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || "",
+        AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN || "",
+      },
+    },
+  }),
   {
     batchSize: 1,
     maximumBatchingWindowInSeconds: 0,
