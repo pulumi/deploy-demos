@@ -32,19 +32,21 @@ Deployment driver examples show using the Pulumi Deployment API to create deploy
 - [TTL Stacks](./pulumi-programs/ttl-stacks) - infrastructure that enables temporary stacks. Set a `ttl` stack tag, run an update, and the stack automatically gets destroyed by Pulumi Deployment API after the expiration period.
 - [Drift Detection](./pulumi-programs/drift-detection) - infrastructure that detects when desired state diverges from reality. Automatically detect when manual changes are made to your infrastructure and not synced to the Pulumi program.
 
-## Pulumi Programs
-
-We have a set of demo Pulumi programs that can be conveniently referenced as git source within this repo. They can be found in the [pulumi-programs](./pulumi-programs) directory.
-
 ## Automation API Examples
 
-Pulumi Deployments can be run via Automation API. Examples are available in the [Automation API Examples repo](https://github.com/pulumi/automation-api-examples).
+Pulumi Deployments can also be run via Automation API. Examples are available in the [Automation API Examples repo](https://github.com/pulumi/automation-api-examples).
 
 - [Go](https://github.com/pulumi/automation-api-examples/tree/main/go/remote_deployment)
 - [Node.js](https://github.com/pulumi/automation-api-examples/tree/main/nodejs/remoteDeployment-tsnode)
 - [Python](https://github.com/pulumi/automation-api-examples/tree/main/python/remote_deployment)
 - [.NET](https://github.com/pulumi/automation-api-examples/tree/main/dotnet/RemoteDeployment)
 
+## Pulumi Programs
+
+We have a set of demo Pulumi programs that can be conveniently referenced as git source within this repo. They can be found in the [pulumi-programs](./pulumi-programs) directory.
+
 ## Share feedback
 
-We are really excited to start garnering feedback on Pulumi Deploy from users. Please feel free to open an issue in this repo for enhancements or bugs or ask to be invited to the private #pulumi-deploy-beta Slack channel to ask us questions.
+Pulumi Deployments is currently in preview. [Request access](https://www.pulumi.com/product/pulumi-deployments) to use this feature.
+
+Please post any bug reports or feature requests in the [Service Requests repo](https://github.com/pulumi/service-requests/issues/new/choose).
