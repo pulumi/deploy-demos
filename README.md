@@ -25,14 +25,16 @@ This API enables many of the same scenarios as Automation API, like platform bui
 
 ## Examples
 
-Deployment driver examples show using the Pulumi Deployment API to create deployments, monitor status, and tail logs.
+### Deployment Drivers
+
+Deployment driver examples demonstrate how to use the Pulumi Deployment REST API to create deployments, monitor status, and tail logs.
 
 - [typescript-driver](./deployment-drivers/nodejs/typescript-driver) - a deployment driver written in Typescript. It can deploy Pulumi programs written in any language.
 - [Go CLI driver](./deployment-drivers/go/cli) - a deployment driver written in Typescript. It can deploy Pulumi programs written in any language.
 - [TTL Stacks](./pulumi-programs/ttl-stacks) - infrastructure that enables temporary stacks. Set a `ttl` stack tag, run an update, and the stack automatically gets destroyed by Pulumi Deployment API after the expiration period.
 - [Drift Detection](./pulumi-programs/drift-detection) - infrastructure that detects when desired state diverges from reality. Automatically detect when manual changes are made to your infrastructure and not synced to the Pulumi program.
 
-## Automation API Examples
+### Automation API
 
 Pulumi Deployments can also be run via Automation API. Examples are available in the [Automation API Examples repo](https://github.com/pulumi/automation-api-examples).
 
@@ -41,7 +43,7 @@ Pulumi Deployments can also be run via Automation API. Examples are available in
 - [Python](https://github.com/pulumi/automation-api-examples/tree/main/python/remote_deployment)
 - [.NET](https://github.com/pulumi/automation-api-examples/tree/main/dotnet/RemoteDeployment)
 
-## Pulumi Programs
+### Pulumi Programs
 
 We have a set of demo Pulumi programs that can be conveniently referenced as git source within this repo. They can be found in the [pulumi-programs](./pulumi-programs) directory.
 
