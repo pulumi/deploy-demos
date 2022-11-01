@@ -60,12 +60,11 @@ export const handler: aws.sqs.QueueEventHandler = async (e) => {
         }
       );
 
-      console.log("stack created...");
-
-      const res = await stackToDestroy.destroy();
-
       console.log(`destroy queued: ${organization}/${project}/${stack}\n`);
-      console.log("result was:", res);
+
+      await stackToDestroy.destroy();
+
+      console.log("done!");
 
       // continue to the next message (right now it is one message per
       // batch); if we make it through the loop without error, then the batch
