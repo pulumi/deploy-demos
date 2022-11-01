@@ -36,6 +36,15 @@ Deployment driver examples show using the Pulumi Deployment API to create deploy
 
 We have a set of demo Pulumi programs that can be conveniently referenced as git source within this repo. They can be found in the [pulumi-programs](./pulumi-programs) directory.
 
+## Automation API Examples
+
+Pulumi Deployments can be run via Automation API. Examples are available in the [Automation API Examples repo](https://github.com/pulumi/automation-api-examples).
+
+- [Go](https://github.com/pulumi/automation-api-examples/tree/main/go/remote_deployment)
+- [Node.js](https://github.com/pulumi/automation-api-examples/tree/main/nodejs/remoteDeployment-tsnode)
+- [Python](https://github.com/pulumi/automation-api-examples/tree/main/python/remote_deployment)
+- [.NET](https://github.com/pulumi/automation-api-examples/tree/main/dotnet/RemoteDeployment)
+
 ## Share feedback
 
 We are really excited to start garnering feedback on Pulumi Deploy from users. Please feel free to open an issue in this repo for enhancements or bugs or ask to be invited to the private #pulumi-deploy-beta Slack channel to ask us questions.
