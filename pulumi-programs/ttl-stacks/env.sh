@@ -1,6 +1,10 @@
 #!/bin/bash
 
 curl -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+  https://api.pulumi.com/api/preview/console/stacks/pulumi/bucket-time/ced/deployment/settings/environment \
+  -d "{\"name\": \"AWS_SECRET_ACCESS_KEY\", \"value\": \"$AWS_SECRET_ACCESS_KEY\", \"encrypt\": true}"
+
+curl -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
   https://api.pulumi.com/api/preview/console/stacks/pulumi/ttl-stacks/ced/deployment/settings/environment \
   -d "{\"name\": \"AWS_SECRET_ACCESS_KEY\", \"value\": \"$AWS_SECRET_ACCESS_KEY\", \"encrypt\": true}"
 
