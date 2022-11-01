@@ -3,22 +3,70 @@ import * as awsx from "@pulumi/awsx";
 import * as pulumi from "@pulumi/pulumi";
 import * as service from "@pulumi/pulumiservice";
 import * as random from "@pulumi/random";
+import * as crypto from "crypto";
 import fetch from "node-fetch";
 
-import * as crypto from "crypto";
+console.log(process.env);
 
 const config = new pulumi.Config();
-
-const image = awsx.ecr.buildAndPushImage("stack-ttl", {
-  context: "./app",
-});
-
 const stackConfig = {
   // Webhook secret used to authenticate messages. Must match the value on the
   // webhook's settings.
   sharedSecret: new random.RandomString("shared-secret", { length: 16 }),
   pulumiAccessToken: config.requireSecret("pulumiAccessToken"),
 };
+
+const image = awsx.ecr.buildAndPushImage("stack-ttl", {
+  context: "./app",
+});
+
+const lambdaRole = new aws.iam.Role("stack-ttl-lambda-role", {
+  assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({
+    Service: "lambda.amazonaws.com",
+  }),
+  managedPolicyArns: [
+    aws.iam.ManagedPolicy.AWSLambdaBasicExecutionRole,
+    aws.iam.ManagedPolicies.AmazonS3FullAccess,
+    aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+  ],
+});
+
+// new aws.iam.RolePolicyAttachment("stack-ttl-lambda-policy-attachment", {
+//   role: lambdaRole.name,
+//   policyArn: aws.iam.ManagedPolicy.LambdaFullAccess,
+// });
+
+const queueProcessor = new aws.lambda.Function("stack-ttl-queue-processor", {
+  packageType: "Image",
+  imageUri: image.imageValue,
+  role: lambdaRole.arn,
+  timeout: 60,
+  memorySize: 512,
+  environment: {
+    variables: {
+      PULUMI_HOME: "/tmp/pulumi",
+      PULUMI_ACCESS_TOKEN: stackConfig.pulumiAccessToken,
+      GITHUB_ACCESS_TOKEN: config.requireSecret("githubAccessToken"),
+    },
+  },
+  // imageConfig: {
+  //   entryPoints: []
+  // }
+  // layers: [
+  //   new aws.lambda.LayerVersion("secrets", {
+
+  //   }),
+  // ]
+  // environment: {
+  //   variables: {
+  // AWS_REGION: "us-west-2",
+  // TODO: LayerVersion these secrets
+  // AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || "",
+  // AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || "",
+  // AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN || "",
+  //   },
+  // },
+});
 
 // Just logs information from an incoming webhook request.
 function logRequest(req: awsx.apigateway.Request) {
@@ -84,32 +132,10 @@ const queue = new aws.sqs.Queue("ttl-queue", {
 // passed their expiry. if a message has not passed it's expriy, then it throws
 // an error so the message gets retried. expired messages trigger destroy
 // operations via the pulumi deployment api.
-queue.onEvent(
-  "ttl-queue-processor",
-  new aws.lambda.Function("ttl-queue-processor", {
-    packageType: "Image",
-    imageUri: image.imageValue,
-    role: aws.types.enums.iam.ManagedPolicy.AWSLambdaBasicExecutionRole,
-    // layers: [
-    //   new aws.lambda.LayerVersion("secrets", {
-
-    //   }),
-    // ]
-    environment: {
-      variables: {
-        AWS_REGION: "us-west-2",
-        // TODO: LayerVersion these secrets
-        AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || "",
-        AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || "",
-        AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN || "",
-      },
-    },
-  }),
-  {
-    batchSize: 1,
-    maximumBatchingWindowInSeconds: 0,
-  }
-);
+queue.onEvent("stack-ttl-queue-processor", queueProcessor, {
+  batchSize: 1,
+  maximumBatchingWindowInSeconds: 0,
+});
 
 /** the ttl webhook processes all stack updates, looks up "ttl" tags, and
  * schedules corresponding stacks for deletion via messages in an SQS queue
@@ -119,14 +145,14 @@ const webhookHandler = new awsx.apigateway.API("ttl-webhook-handler", {
     binaryMediaTypes: ["application/json"],
   },
   routes: [
-    {
-      path: "/",
-      method: "GET",
-      eventHandler: async () => ({
-        statusCode: 200,
-        body: "🍹 Pulumi Webhook Responder🍹\n",
-      }),
-    },
+    // {
+    //   path: "/",
+    //   method: "GET",
+    //   eventHandler: async () => ({
+    //     statusCode: 200,
+    //     body: "🍹 Pulumi Webhook Responder🍹\n",
+    //   }),
+    // },
     {
       path: "/",
       method: "POST",
@@ -145,7 +171,7 @@ const webhookHandler = new awsx.apigateway.API("ttl-webhook-handler", {
         const parsedPayload = JSON.parse(payload);
 
         if (webhookKind === "stack_update" && parsedPayload.kind === "update") {
-          let organization = parsedPayload.organization.name;
+          let organization = parsedPayload.organization.githubLogin;
           let stack = parsedPayload.stackName;
           let project = parsedPayload.projectName;
 
