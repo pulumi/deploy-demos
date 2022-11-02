@@ -2,12 +2,13 @@
 
 ## Introduction
 
-Pulumi Deployments is a new product to power infrastructure and platform automation. It consists of three components:
+Pulumi Deployments is a new product to power infrastructure and platform automation. It consists of five components:
 
 1. __The Programmatic Deployment API__ - run Pulumi programs (`pulumi up`, `pulumi refresh`, etc) on Pulumi Service hardware (api.pulumi.com). This includes APIs to observe your deployment and all associated logs as it runs. 
 2. __Click to Deploy__ - click a button from the Pulumi Service Console to run an ad hoc update on your stack.
 3. __Deployment Visualization__ - rich UX to visualize deployment status, deployment logs, and queueing from via the Pulumi Service Console (app.pulumi.com).
 4. __`git push` to Deploy__ -  Configure a stack to deploy automatically in response to `git push` events by installing the Pulumi GitHub App.
+5. __Remote Automation API__ - Our strongly typed infrastructure orchestration technology can now run deployments remotely in the cloud.
 
 A deployment in the Pulumi Service runs on an isolated, single use deployment runner (a virtual machine). That runner will prepare the runtime environment, clone source code, set up any necessary environment variables, run the Pulumi program, and handle reporting logs and status back to the Pulumi Service.
 
