@@ -1,19 +1,19 @@
 #!/bin/bash
 
-curl -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+curl -s -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
   https://api.pulumi.com/api/preview/console/stacks/pulumi/bucket-time/ced/deployment/settings/environment \
-  -d "{\"name\": \"AWS_SECRET_ACCESS_KEY\", \"value\": \"$AWS_SECRET_ACCESS_KEY\", \"encrypt\": true}"
+  -d "{\"name\": \"AWS_SECRET_ACCESS_KEY\", \"value\": \"$AWS_SECRET_ACCESS_KEY\", \"encrypt\": true}" > /dev/null
 
-curl -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+curl -s -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
   https://api.pulumi.com/api/preview/console/stacks/pulumi/bucket-time/ced/deployment/settings/environment \
-  -d "{\"name\": \"AWS_ACCESS_KEY_ID\", \"value\": \"$AWS_ACCESS_KEY_ID\", \"encrypt\": false}"
+  -d "{\"name\": \"AWS_ACCESS_KEY_ID\", \"value\": \"$AWS_ACCESS_KEY_ID\", \"encrypt\": false}" > /dev/null
 
-curl -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+curl -s -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
   https://api.pulumi.com/api/preview/console/stacks/pulumi/bucket-time/ced/deployment/settings/environment \
-  -d "{\"name\": \"AWS_SESSION_TOKEN\", \"value\": \"$AWS_SESSION_TOKEN\", \"encrypt\": false}"
+  -d "{\"name\": \"AWS_SESSION_TOKEN\", \"value\": \"$AWS_SESSION_TOKEN\", \"encrypt\": false}" > /dev/null
 
 # Remove stack from our policy group to speed things up
-curl 'https://api.pulumi.com/api/orgs/pulumi/policygroups/default-policy-group' \
+curl -s 'https://api.pulumi.com/api/orgs/pulumi/policygroups/default-policy-group' \
   -X 'PATCH' \
   -H 'Content-Type: application/json' \
   -H 'Pragma: no-cache' \
@@ -28,4 +28,4 @@ curl 'https://api.pulumi.com/api/orgs/pulumi/policygroups/default-policy-group' 
   -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.5 Safari/605.1.15' \
   -H 'Referer: https://app.pulumi.com/' \
   -H 'Connection: keep-alive' \
-  --data-binary '{"removeStack":{"name":"ced","routingProject":"bucket-time"}}'
+  --data-binary '{"removeStack":{"name":"ced","routingProject":"bucket-time"}}' > /dev/null
