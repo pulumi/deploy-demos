@@ -6,37 +6,47 @@ import * as random from "@pulumi/random";
 import * as crypto from "crypto";
 import fetch from "node-fetch";
 
-console.log(process.env);
-
 const config = new pulumi.Config();
-const stackConfig = {
-  // Webhook secret used to authenticate messages. Must match the value on the
-  // webhook's settings.
-  sharedSecret: new random.RandomString("shared-secret", { length: 16 }),
-  pulumiAccessToken: config.requireSecret("pulumiAccessToken"),
-};
+const region = aws.config.requireRegion();
 
+// Webhook secret used to authenticate messages. Must match the value on the
+// webhook's settings.
+const sharedSecret = new random.RandomString("shared-secret", { length: 16 });
+
+// The Pulumi token our Destroy lambda will use with Automation API.
+const pulumiAccessToken = config.requireSecret("pulumiAccessToken");
+
+// We'll run our Destroy lambda in a container to get our package dependencies
+// set up.
 const image = awsx.ecr.buildAndPushImage("stack-ttl", {
   context: "./app",
 });
 
+// Permissions for our lambdas and step functions. These are appropriate for a
+// demo but too broad for production.
 const lambdaRole = new aws.iam.Role("stack-ttl-lambda-role", {
   assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({
     Service: "lambda.amazonaws.com",
   }),
   managedPolicyArns: [
     aws.iam.ManagedPolicy.AWSLambdaBasicExecutionRole,
-    aws.iam.ManagedPolicies.AmazonS3FullAccess,
-    aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+    aws.iam.ManagedPolicy.AmazonS3FullAccess,
+    aws.iam.ManagedPolicy.AWSStepFunctionsFullAccess,
+  ],
+});
+const sfnRole = new aws.iam.Role("stack-ttl-sfn-role", {
+  assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({
+    Service: `states.${region}.amazonaws.com`,
+  }),
+  managedPolicyArns: [
+    aws.iam.ManagedPolicy.LambdaFullAccess,
+    aws.iam.ManagedPolicy.CloudWatchLogsFullAccess,
   ],
 });
 
-// new aws.iam.RolePolicyAttachment("stack-ttl-lambda-policy-attachment", {
-//   role: lambdaRole.name,
-//   policyArn: aws.iam.ManagedPolicy.LambdaFullAccess,
-// });
-
-const queueProcessor = new aws.lambda.Function("stack-ttl-queue-processor", {
+// The lambda our step function will invoke when it's time to actually destroy
+// the stack. See app/index.ts for its implementation.
+const destroyFunction = new aws.lambda.Function("stack-ttl-destroyer", {
   packageType: "Image",
   imageUri: image.imageValue,
   role: lambdaRole.arn,
@@ -45,27 +55,105 @@ const queueProcessor = new aws.lambda.Function("stack-ttl-queue-processor", {
   environment: {
     variables: {
       PULUMI_HOME: "/tmp/pulumi",
-      PULUMI_ACCESS_TOKEN: stackConfig.pulumiAccessToken,
+      PULUMI_ACCESS_TOKEN: pulumiAccessToken,
       GITHUB_ACCESS_TOKEN: config.requireSecret("githubAccessToken"),
     },
   },
-  // imageConfig: {
-  //   entryPoints: []
-  // }
-  // layers: [
-  //   new aws.lambda.LayerVersion("secrets", {
+});
 
-  //   }),
-  // ]
-  // environment: {
-  //   variables: {
-  // AWS_REGION: "us-west-2",
-  // TODO: LayerVersion these secrets
-  // AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || "",
-  // AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || "",
-  // AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN || "",
-  //   },
-  // },
+// The lambda invoked when Pulumi sends us a webhook notification that a stack
+// operation has taken place.
+//
+// Broadly speaking, this will authenticate the request, query the Pulumi REST
+// API to determine tags attached to the stack, and if it includes a "ttl: N"
+// tag it will schedule the Destroy lambda to execute after N minutes.
+const webhookCallback = new aws.lambda.CallbackFunction("webhook", {
+  callback: async (req: awsx.apigateway.Request) => {
+    logRequest(req);
+    const authenticateResult = authenticateRequest(req);
+    if (authenticateResult) {
+      return authenticateResult;
+    }
+
+    const webhookKind =
+      req.headers !== undefined ? req.headers["pulumi-webhook-kind"] : "";
+    const bytes = req.body!.toString();
+    const payload = Buffer.from(bytes, "base64").toString();
+    const parsedPayload = JSON.parse(payload);
+
+    if (webhookKind === "stack_update" && parsedPayload.kind === "update") {
+      let organization = parsedPayload.organization.githubLogin;
+      let stack = parsedPayload.stackName;
+      let project = parsedPayload.projectName;
+
+      console.log(
+        `processing update handler for stack: ${organization}/${project}/${stack}!\n`
+      );
+
+      const url = `https://api.pulumi.com/api/stacks/${organization}/${project}/${stack}`;
+      const headers = {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `token ${pulumiAccessToken.get()}`,
+      };
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+      });
+
+      if (!response.ok) {
+        let errMessage = "";
+        try {
+          errMessage = await response.text();
+        } catch {}
+        throw new Error(`failed to get stack: ${errMessage}`);
+      }
+
+      const stackResult = await response.json();
+      const ttlTag = (stackResult as any)?.tags?.ttl;
+      if (!ttlTag) {
+        console.log(
+          `no ttl tag found for stack: ${organization}/${project}/${stack}!\n`
+        );
+        return {
+          statusCode: 200,
+          body: `noop for stack ${organization}/${project}/${stack}!\n`,
+        };
+      }
+
+      console.log(
+        `ttl tag found for stack, enqueueing destroy: ${organization}/${project}/${stack}!\n`
+      );
+
+      const expirationMinutes = parseInt(ttlTag) ?? 30;
+
+      // Schedule state machine with a delay
+      const sfnClient = new aws.sdk.StepFunctions();
+      await sfnClient
+        .startExecution({
+          stateMachineArn: cleanup.arn.get(),
+          input: JSON.stringify({
+            delaySeconds: expirationMinutes * 60,
+            stack: stack,
+            project: project,
+            organization: organization,
+          }),
+        })
+        .promise();
+
+      console.log(
+        `scheduled cleanup for stack ${organization}/${project}/${stack} in ${expirationMinutes} minutes!\n`
+      );
+
+      return {
+        statusCode: 200,
+        body: `scheduled cleanup for stack ${organization}/${project}/${stack}\n`,
+      };
+    }
+
+    return { statusCode: 200, body: `noop!\n` };
+  },
+  role: lambdaRole,
 });
 
 // Just logs information from an incoming webhook request.
@@ -85,7 +173,7 @@ function authenticateRequest(
 ): awsx.apigateway.Response | undefined {
   const webhookSig =
     req.headers !== undefined ? req.headers["pulumi-webhook-signature"] : "";
-  if (!stackConfig.sharedSecret || !webhookSig) {
+  if (!sharedSecret || !webhookSig) {
     return undefined;
   }
 
@@ -93,10 +181,7 @@ function authenticateRequest(
     req.body!.toString(),
     req.isBase64Encoded ? "base64" : "utf8"
   );
-  const hmacAlg = crypto.createHmac(
-    "sha256",
-    stackConfig.sharedSecret.result.get()
-  );
+  const hmacAlg = crypto.createHmac("sha256", sharedSecret.result.get());
   const hmac = hmacAlg.update(payload).digest("hex");
 
   const result = crypto.timingSafeEqual(
@@ -116,155 +201,54 @@ function authenticateRequest(
   return undefined;
 }
 
-type ttlMessage = {
-  organization: string;
-  project: string;
-  stack: string;
-  expiration: string;
-};
-
-// the queue for scheduling stack deletion
-const queue = new aws.sqs.Queue("ttl-queue", {
-  visibilityTimeoutSeconds: 181, // TODO: tighten this up as well as lambda timeout
-});
-
-// this processor looks for messages in the queue one at a time that have
-// passed their expiry. if a message has not passed it's expriy, then it throws
-// an error so the message gets retried. expired messages trigger destroy
-// operations via the pulumi deployment api.
-queue.onEvent("stack-ttl-queue-processor", queueProcessor, {
-  batchSize: 1,
-  maximumBatchingWindowInSeconds: 0,
-});
-
-/** the ttl webhook processes all stack updates, looks up "ttl" tags, and
- * schedules corresponding stacks for deletion via messages in an SQS queue
- */
+// This exposes our webhook callback to the world.
 const webhookHandler = new awsx.apigateway.API("ttl-webhook-handler", {
   restApiArgs: {
     binaryMediaTypes: ["application/json"],
   },
   routes: [
-    // {
-    //   path: "/",
-    //   method: "GET",
-    //   eventHandler: async () => ({
-    //     statusCode: 200,
-    //     body: "🍹 Pulumi Webhook Responder🍹\n",
-    //   }),
-    // },
     {
       path: "/",
       method: "POST",
-
-      eventHandler: async (req) => {
-        logRequest(req);
-        const authenticateResult = authenticateRequest(req);
-        if (authenticateResult) {
-          return authenticateResult;
-        }
-
-        const webhookKind =
-          req.headers !== undefined ? req.headers["pulumi-webhook-kind"] : "";
-        const bytes = req.body!.toString();
-        const payload = Buffer.from(bytes, "base64").toString();
-        const parsedPayload = JSON.parse(payload);
-
-        if (webhookKind === "stack_update" && parsedPayload.kind === "update") {
-          let organization = parsedPayload.organization.githubLogin;
-          let stack = parsedPayload.stackName;
-          let project = parsedPayload.projectName;
-
-          console.log(
-            `processing update handler for stack: ${organization}/${project}/${stack}!\n`
-          );
-
-          const url = `https://api.pulumi.com/api/stacks/${organization}/${project}/${stack}`;
-          const headers = {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `token ${stackConfig.pulumiAccessToken.get()}`,
-          };
-          const response = await fetch(url, {
-            method: "GET",
-            headers,
-          });
-
-          if (!response.ok) {
-            let errMessage = "";
-            try {
-              errMessage = await response.text();
-            } catch {}
-            throw new Error(`failed to get stack: ${errMessage}`);
-          }
-
-          const stackResult = await response.json();
-          const ttlTag = (stackResult as any)?.tags?.ttl;
-          if (!ttlTag) {
-            console.log(
-              `no ttl tag found for stack: ${organization}/${project}/${stack}!\n`
-            );
-            return {
-              statusCode: 200,
-              body: `noop for stack ${organization}/${project}/${stack}!\n`,
-            };
-          }
-
-          console.log(
-            `ttl tag found for stack, queueing SQS message: ${organization}/${project}/${stack}!\n`
-          );
-
-          let time = new Date();
-          const expirationMinutes = parseInt(ttlTag) || 30;
-          time = new Date(time.getTime() + 60000 * expirationMinutes);
-
-          const message = {
-            stack,
-            project,
-            organization,
-            expiration: time.toISOString(),
-          };
-
-          const params = {
-            // Remove DelaySeconds parameter and value for FIFO queues
-            DelaySeconds: 10,
-            MessageBody: JSON.stringify(message),
-            QueueUrl: queue.url.get(),
-          };
-
-          const sqsClient = new aws.sdk.SQS();
-
-          await new Promise((resolve, reject) => {
-            sqsClient.sendMessage(params, (err, data) => {
-              if (err) {
-                console.log(err);
-                reject(err);
-              }
-              console.log(
-                `scheduled cleanup for stack ${organization}/${project}/${stack} at ${time.toUTCString()}!\n`
-              );
-              resolve(data);
-            });
-          });
-
-          return {
-            statusCode: 200,
-            body: `scheduled cleanup for stack ${organization}/${project}/${stack}\n`,
-          };
-        }
-
-        return { statusCode: 200, body: `noop!\n` };
-      },
+      eventHandler: webhookCallback,
     },
   ],
 });
 
-const webhook = new service.Webhook("stack-ttl-webhook", {
+// This uses the Pulumi service provider to provision a Pulumi webhook for
+// ourselves. This sends events whenever stack operations occur.
+const pulumiWebhook = new service.Webhook("stack-ttl-webhook", {
   payloadUrl: webhookHandler.url,
   active: true,
   displayName: "stack-ttl-webhook",
   organizationName: "pulumi",
-  secret: stackConfig.sharedSecret.result,
+  secret: sharedSecret.result,
 });
 
-export const url = webhookHandler.url;
+// This state machine runs the Destroy lambda after waiting for the provided
+// number of seconds -- potentially for days or weeks.
+const cleanup = new aws.sfn.StateMachine("cleanup", {
+  roleArn: sfnRole.arn,
+  definition: destroyFunction.arn.apply((arn) => {
+    return JSON.stringify({
+      Comment: "Invokes a lambda to destroy a stack after a delay",
+      StartAt: "Wait",
+      States: {
+        Wait: {
+          Type: "Wait",
+          SecondsPath: "$.delaySeconds",
+          Next: "Destroy",
+        },
+        Destroy: {
+          Type: "Task",
+          Resource: "arn:aws:states:::lambda:invoke",
+          Parameters: {
+            "Payload.$": "$",
+            FunctionName: arn,
+          },
+          End: true,
+        },
+      },
+    });
+  }),
+});
