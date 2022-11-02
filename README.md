@@ -1,5 +1,3 @@
-> **_NOTE:_**  This is a feature in private preview. By getting access to this repository you understand not to speak publicly about the feature and not to discuss it with users outside of the private preview.
-
 # Pulumi Deployments
 
 ## Introduction
