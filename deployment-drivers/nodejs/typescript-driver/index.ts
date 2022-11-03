@@ -1,6 +1,6 @@
-let org: string;
-let stack: string;
-const backendURL = "https://api.pulumi.com/api"
+let org = "pulumi";
+let stack = "dev"
+const backendURL = "http://api.pulumi.com/api"
 
 type SupportedProject = "simple-resource" | "bucket-time" | "go-bucket" | "lambda-template" | "yamlcaml";
 type Operation = "update" | "preview" | "destroy" | "refresh";
@@ -33,17 +33,7 @@ const makePulumiAPICall = async (method: string, urlSuffix: string, payload?: an
 const createDeployment = async (project: string, payload: any) => {
     const urlSuffix  = `preview/${org}/${project}/${stack}/deployments`;
 
-    try {
-        return await makePulumiAPICall('POST', urlSuffix, payload);
-    } catch (e: any) {
-        // Create the stack if it doesn't exist
-        if (e.message.includes("404")) {
-            const createStackPayload = { "stackName": stack };
-            await makePulumiAPICall('POST', `stacks/${org}/${project}`, createStackPayload);
-            return await makePulumiAPICall('POST', urlSuffix, payload);
-        }
-        throw e;
-    }
+    return await makePulumiAPICall('POST', urlSuffix, payload);
 }
 
 const createSimpleDeployment = async (op: Operation) => {
@@ -52,7 +42,10 @@ const createSimpleDeployment = async (op: Operation) => {
             git: {
                 repoURL: "https://github.com/pulumi/deploy-demos.git",
                 branch: "refs/heads/main",
-                repoDir: "pulumi-programs/simple-resource"
+                repoDir: "pulumi-programs/simple-resource",
+                gitAuth: {
+                    accessToken: process.env.GITHUB_ACCESS_TOKEN,
+                }
             }
         },
         operationContext: {
@@ -244,7 +237,7 @@ const getDeploymentLogs = async (deployment: DeploymentAction) => {
         }
 
         const query = `job=${currentJob}&step=${currentStep}&offset=${nextOffset}`;
-        const logsResponse: any = await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}/logs?${query}`);
+        const logsResponse = await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}/logs?${query}`);
         const logLines = (logsResponse.lines || []).map((l:any) => `${l.timestamp}: ${l.line}`);
         logs.push(...logLines);
         if (logsResponse.nextOffset !== undefined) {
@@ -310,8 +303,8 @@ const queryDeployment = async (deployment: DeploymentAction) => {
         };
     }
 
-    const deploymentStatusResult: any = await getDeploymentStatus(deployment);
-        deployment.status = deploymentStatusResult.status;
+    const deploymentStatusResult = await getDeploymentStatus(deployment);
+        deployment.status = deploymentStatusResult.status; 
 
         // we only have enough state about the deployment to query for logs once it reaches "running" state
         // https://github.com/pulumi/pulumi-service/issues/10266
@@ -332,6 +325,7 @@ const queryDeployment = async (deployment: DeploymentAction) => {
 }
 
 const monitorDeployments = async (deployments: DeploymentAction[]) => {
+    
     let deploymentIDs = deployments.map(d => d.id!);
 
     while(deploymentIDs.length) {
@@ -344,7 +338,7 @@ const monitorDeployments = async (deployments: DeploymentAction[]) => {
         }
         // filter out completed deployments for the next pass
         deploymentIDs = deploymentIDs.filter(x => completedDeployments.indexOf(x) === -1);
-        console.log(`Finished polling deployments. Completed: ${completedDeployments.length}. Remaining: ${deploymentIDs.length}.`);
+        console.log(`Finished polling deployments: ${completedDeployments.length} out of ${deploymentIDs.length} complete.`);
         await delay(2000);
     }
 };
@@ -353,7 +347,7 @@ const execDeployments = async (deployments: DeploymentAction[]) => {
     let deploymentNumber = 1;
     for(let deployment of deployments) {
         console.log(`executing deployment ${deploymentNumber}`)
-        const deploymentResult: any = await createProjectDeployment(deployment.project, deployment.op);
+        const deploymentResult = await createProjectDeployment(deployment.project, deployment.op);
         console.log(deploymentResult);
         deployment.id = deploymentResult.id;
         deploymentNumber++;
