@@ -10,8 +10,12 @@ import (
 )
 
 const (
-	url            = "https://api.pulumi.com/api/preview"
-	deploymentsUri = "deployments"
+	baseURL = "https://api.pulumi.com/api"
+)
+
+var (
+	previewURL = fmt.Sprintf("%s/preview", baseURL)
+	stackURL   = fmt.Sprintf("%s/stacks", baseURL)
 )
 
 type DeployData struct {
@@ -30,6 +34,10 @@ type OperationContext struct {
 	Operation   string            `json:"operation"`
 	Environment map[string]string `json:"environmentVariables"`
 	Commands    []string          `json:"preRunCommands"`
+}
+
+type CreateStackData struct {
+	StackName string `json:"stackName"`
 }
 
 // type DeployResult struct {
@@ -89,7 +97,7 @@ func main() {
 		resp, err = client.R().
 			SetHeader("Accept", "application/json").
 			SetHeader("Authorization", fmt.Sprintf("token %s", *token)).
-			Get(fmt.Sprintf("%s/%s/%s/%s/deployments/%s", url, *org, *project, *stack, *logId))
+			Get(fmt.Sprintf("%s/%s/%s/%s/deployments/%s", previewURL, *org, *project, *stack, *logId))
 
 		fmt.Println(string(resp.Body()))
 
@@ -98,41 +106,60 @@ func main() {
 		resp, err = client.R().
 			SetHeader("Accept", "application/json").
 			SetHeader("Authorization", fmt.Sprintf("token %s", *token)).
-			Get(fmt.Sprintf("%s/%s/%s/%s/deployments/%s/logs?step=%s&offset=100", url, *org, *project, *stack, *stepLogId, strconv.Itoa(*stepLogStep)))
+			Get(fmt.Sprintf("%s/%s/%s/%s/deployments/%s/logs?step=%s&offset=100", previewURL, *org, *project, *stack, *stepLogId, strconv.Itoa(*stepLogStep)))
 
 		fmt.Println(string(resp.Body()))
 
 	case requestCmd.FullCommand():
-		client.SetDebug(*debug)
-		resp, err = client.R().
-			SetBody(DeployData{
-				SourceContext: SourceContext{
-					GitInfo: GitInfo{
-						RepoURL: *repoUrl,
-						Branch:  *branch,
-						RepoDir: *repoDir,
-					},
-				},
-				OperationContext: OperationContext{
-					Operation:   *operation,
-					Environment: *environment,
-					Commands:    *commands,
-				}}).
-			SetHeader("Authorization", fmt.Sprintf("token %s", *token)).
-			SetHeader("Accept", "application/json").
-			Post(fmt.Sprintf("%s/%s/%s/%s/deployments", url, *org, *project, *stack))
-		if err != nil {
-			log.Fatalf("error creating deployment: %v", err)
-		}
-
-		switch resp.StatusCode() {
-		case 401:
-			log.Fatalf("auth error: %s", resp.Body())
-		default:
-			log.Printf("created deployment with id: %s\n", string(resp.Body()))
-		}
+		createDeployment(client)
 
 	default:
 		fmt.Println("nothing requested :(")
+	}
+}
+
+func createDeployment(client *resty.Client) {
+	client.SetDebug(*debug)
+	resp, err = client.R().
+		SetBody(DeployData{
+			SourceContext: SourceContext{
+				GitInfo: GitInfo{
+					RepoURL: *repoUrl,
+					Branch:  *branch,
+					RepoDir: *repoDir,
+				},
+			},
+			OperationContext: OperationContext{
+				Operation:   *operation,
+				Environment: *environment,
+				Commands:    *commands,
+			}}).
+		SetHeader("Authorization", fmt.Sprintf("token %s", *token)).
+		SetHeader("Accept", "application/json").
+		Post(fmt.Sprintf("%s/%s/%s/%s/deployments", previewURL, *org, *project, *stack))
+	if err != nil {
+		log.Fatalf("error creating deployment: %v", err)
+	}
+
+	switch resp.StatusCode() {
+	case 401:
+		log.Fatalf("auth error: %s", resp.Body())
+	case 404:
+		log.Printf("stack '%s/%s' doesn't exist, creating it.\n", *project, *stack)
+		resp, err = client.R().
+			SetBody(CreateStackData{
+				StackName: *stack,
+			}).
+			SetHeader("Authorization", fmt.Sprintf("token %s", *token)).
+			SetHeader("Accept", "application/json").
+			Post(fmt.Sprintf("%s/%s/%s", stackURL, *org, *project))
+		if resp.StatusCode() == 200 {
+			log.Printf("created stack '%s/%s', now creating deployment.\n", *project, *stack)
+			createDeployment(client)
+		} else {
+			log.Fatalf("Error: %s", string(resp.Body()))
+		}
+	default:
+		log.Printf("created deployment with id: %s\n", string(resp.Body()))
 	}
 }

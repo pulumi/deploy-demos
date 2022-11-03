@@ -15,11 +15,10 @@ A deployment in the pulumi service runs on an isolated, single use deployment ru
 
 The driver expects a set of common environment variables to be exported in the shell you run your program. You'll need to collect:
 
-1. `PULUMI_ACCESS_TOKEN`: [pulumi access token ](https://www.pulumi.com/docs/intro/pulumi-service/accounts/#creating-access-tokens)
-2. `GITHUB_ACCESS_TOKEN`: [GitHub PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) (This PAT needs `repo` scope).
-3. AWS Credentials for examples that create cloud resources (`AWS_ACCESS_KEY`, etc). 
-4. `ORG_NAME`: set this variable to your pulumi username or organization name that contains your stack
-5. `STACK_NAME`: defaults to `dev`
+1. `PULUMI_ACCESS_TOKEN`: [pulumi access token](https://www.pulumi.com/docs/intro/pulumi-service/accounts/#creating-access-tokens)
+2. AWS Credentials for examples that create cloud resources (`AWS_ACCESS_KEY`, etc). 
+3. `ORG_NAME`: set this variable to your pulumi username or organization name that contains your stack
+4. `STACK_NAME`: defaults to `dev`
 
 ## Running the program
 
@@ -36,7 +35,6 @@ $ pulumi stack init dev
 # from /typescript-driver
 $ yarn install
 $ export PULUMI_ACCESS_TOKEN=...
-$ export GITHUB_ACCESS_TOKEN=...
 $ export ORG_NAME=...
 $ # splat your AWS creds into env vars
 $ yarn start
