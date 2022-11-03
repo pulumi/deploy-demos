@@ -108,3 +108,5 @@ dist
 
 # IntelliJ local files
 .idea
+
+**/deployer

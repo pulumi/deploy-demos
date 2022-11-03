@@ -4,6 +4,73 @@ const backendURL = "https://api.pulumi.com/api"
 
 type SupportedProject = "simple-resource" | "bucket-time" | "go-bucket" | "lambda-template" | "yamlcaml";
 type Operation = "update" | "preview" | "destroy" | "refresh";
+type DeploymentStatus = "not-started" | "accepted" | "running" | "succeeded" | "failed";
+
+interface LogLine {
+    timestamp: string;
+    line: string;
+}
+
+interface DeploymentLogsResponse {
+    lines: LogLine[];
+    nextToken?: string;
+    nextOffset?: number;
+}
+
+interface RequesterInformation {
+    name: string
+    githubLogin: string
+    avatarUrl: string
+    email: string
+}
+
+interface DeploymentStep {
+    name: string
+    status: string
+    started: string
+    lastUpdated: string
+}
+
+interface DeploymentJob {
+    status: string
+    started: string
+    lastUpdated: string
+    steps: DeploymentStep[]
+}
+
+interface EnvironmentVariable {
+    name: string
+    value: string
+    secret: boolean
+}
+
+interface GitDeploymentSource {
+    repoURL: string
+    repoDir?: string
+    commit?: string
+    branch?: string
+}
+
+interface DeploymentSource {
+    git?: GitDeploymentSource
+}
+
+interface DeploymentConfiguration {
+    environmentVariables: EnvironmentVariable[]
+    source?: DeploymentSource
+}
+
+interface DeploymentStatusResponse {
+    id: string
+    created: string
+    modified: string
+    status: DeploymentStatus
+    version: number
+    requestedBy: RequesterInformation
+    jobs?: DeploymentJob[]
+    latestVersion: number
+    configuration: DeploymentConfiguration
+}
 
 const makePulumiAPICall = async (method: string, urlSuffix: string, payload?: any) => {
     const url = `${backendURL}/${urlSuffix}`
@@ -228,8 +295,7 @@ const createProjectDeployment = async (project: SupportedProject, op: Operation 
     }
 }
 
-const getDeploymentStatus = async (deployment: DeploymentAction) => {
-
+const getDeploymentStatus = async (deployment: DeploymentAction): Promise<DeploymentStatusResponse> => {
    return await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}`)
 }
 
@@ -244,8 +310,8 @@ const getDeploymentLogs = async (deployment: DeploymentAction) => {
         }
 
         const query = `job=${currentJob}&step=${currentStep}&offset=${nextOffset}`;
-        const logsResponse: any = await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}/logs?${query}`);
-        const logLines = (logsResponse.lines || []).map((l:any) => `${l.timestamp}: ${l.line}`);
+        const logsResponse: DeploymentLogsResponse = await makePulumiAPICall("GET", `preview/${org}/${deployment.project}/${stack}/deployments/${deployment.id}/logs?${query}`);
+        const logLines = (logsResponse.lines || []).map((l: LogLine) => `${l.timestamp}: ${l.line}`);
         logs.push(...logLines);
         if (logsResponse.nextOffset !== undefined) {
             deployment.logMarker!.nextOffset = logsResponse.nextOffset;
@@ -255,7 +321,7 @@ const getDeploymentLogs = async (deployment: DeploymentAction) => {
             if(deployment.logMarker!.currentStep >= deployment.logMarker!.totalSteps!) {
                 break;
             }
-            logs.push(`\nstep: ${deployment.logMarker!.currentStep}\n`);
+            logs.push("\n", `step: ${deployment.logMarker!.currentStep}\n`);
         }
 
         hasMoreLogs = logsResponse.nextOffset !== nextOffset;
@@ -310,14 +376,14 @@ const queryDeployment = async (deployment: DeploymentAction) => {
         };
     }
 
-    const deploymentStatusResult: any = await getDeploymentStatus(deployment);
+    const deploymentStatusResult = await getDeploymentStatus(deployment);
         deployment.status = deploymentStatusResult.status;
 
         // we only have enough state about the deployment to query for logs once it reaches "running" state
         // https://github.com/pulumi/pulumi-service/issues/10266
         // https://github.com/pulumi/pulumi-service/issues/10339
-        if (deployment.status === "running" || deployment.status === "succeeded" || deployment.status === "failed" ) {
-            deployment.logMarker.totalSteps = deploymentStatusResult.jobs[0].steps.length;
+        if (["running", "succeeded", "failed"].includes(deployment.status)) {
+            deployment.logMarker.totalSteps = deploymentStatusResult.jobs![0].steps.length;
             const deploymentLogs = await getDeploymentLogs(deployment);
             const logs = deploymentLogs.join('');
             if (logs) {
