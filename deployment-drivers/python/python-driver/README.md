@@ -10,8 +10,8 @@ A deployment in the pulumi service runs on an isolated, single use deployment ru
 2. [Poetry](https://python-poetry.org/docs/)
 
 Install the required dependencies with:
-```shell
-poetry install
+```console
+$ poetry install
 ```
 
 ## Environment Variables and Credentials
@@ -31,6 +31,7 @@ To customize the request, you can edit the [`__main__.py`](__main__.py) file.
 You can run the program with:
 
 ```console
+$ poetry shell
 $ export PULUMI_ACCESS_TOKEN=....
 $ PULUMI_ORG={your-org-name} python .
 ```
