@@ -22,14 +22,7 @@ The driver expects a set of common environment variables to be exported in the s
 
 ## Running the program
 
-You'll need to create a stack for the project you'd like to deploy before running the driver programs. For instance:
-
-```console
-$ cd ../../pulumi-programs/simple-resource
-$ pulumi stack init dev
-```
-
-`cd` back into the deployment driver directory. With the stack created, you can run the deployment driver: 
+You can run the deployment driver with: 
 
 ```console
 # from /typescript-driver
