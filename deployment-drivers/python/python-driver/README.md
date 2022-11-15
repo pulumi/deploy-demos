@@ -1,8 +1,6 @@
 # Deployment Driver
-A python program to:
-- create deployments via the Pulumi Deployment API
-- monitor status of deployments
-- print and tail deployment logs
+
+A python program to create deployments via the Pulumi Deployment API.
 
 A deployment in the pulumi service runs on an isolated, single use deployment runner (a VM). That runner will prepare the runtime environment, clone source code, set up any necessary environment variables, run the pulumi program, and handle reporting logs and status back to the Pulumi Service.
 
