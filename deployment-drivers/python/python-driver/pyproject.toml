@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "test-deploy-demo"
+version = "0.1.0"
+description = "a test of the pulumi deployment api"
+authors = ["Laura Santamaria <laura@nimbinatus.com>"]
+readme = "README.md"
+packages = [{include = "test_deploy_demo"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.28.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
