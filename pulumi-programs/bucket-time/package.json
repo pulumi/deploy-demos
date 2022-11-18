@@ -7,6 +7,7 @@
     "dependencies": {
         "@pulumi/aws": "^5.0.0",
         "@pulumi/awsx": "^0.40.0",
+        "@pulumi/azure": "^5.24.0",
         "@pulumi/gcp": "^6.43.0",
         "@pulumi/pulumi": "^3.0.0"
     }
