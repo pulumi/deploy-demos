@@ -36,17 +36,13 @@ runtime: yaml
 
         const payload = {
             sourceContext: {
-                git: {
-                    repoURL: "https://github.com/pulumi/examples.git", // use a random public repo so as to not require a github token
-                    branch: "refs/heads/master",
-                    repoDir: "aws-go-lambda", // dummy repo. What is in here doesn't matter
-                }
+                yaml: {
+                    program: yamlProgram,
+                },
             },
             operationContext: {
                 operation: "preview",
                 preRunCommands: [
-                    // the pulumi program gets written to disk via pre-run commands
-                    `echo "$YAML_PROGRAM" | base64 -d | tee Pulumi.yaml`,
                     `pulumi stack select ${organization}/${stack} && pulumi config refresh`,
                     // this is where the magic happens.
                     // this command will fail if there are any changes
@@ -54,7 +50,6 @@ runtime: yaml
                     `pulumi refresh --expect-no-changes --yes`,
                 ],
                 environmentVariables: {
-                    YAML_PROGRAM: Buffer.from(yamlProgram).toString('base64'), // pass the program as an env var
                     AWS_REGION: "us-west-2",
                     // pass in environment variables available in the current lambda execution role to destroy the target program
                     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,

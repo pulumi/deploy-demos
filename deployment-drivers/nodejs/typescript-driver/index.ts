@@ -1,6 +1,6 @@
 let org: string;
 let stack: string;
-const backendURL = "https://api.pulumi.com/api"
+const backendURL = "https://api.evan.pulumi-dev.io/api"
 
 type SupportedProject = "simple-resource" | "bucket-time" | "go-bucket" | "lambda-template" | "yamlcaml";
 type Operation = "update" | "preview" | "destroy" | "refresh";
@@ -150,33 +150,17 @@ outputs:
     # Export the name of the bucket
     bucketName: \${my-bucket.id}
 `;
-    const stackYaml = `config:
-    aws:region: us-west-2    
-`;
     const payload = {
         sourceContext: {
-            git: {
-                repoURL: "https://github.com/pulumi/deploy-demos.git",
-                branch: "refs/heads/main",
-                repoDir: "pulumi-programs/yamlcaml", // dummy repo. What is in here doesn't matter
-                gitAuth: {
-                    accessToken: process.env.GITHUB_ACCESS_TOKEN,
-                }
-            }
+            yaml: {
+                program: yamlProgram
+            },
         },
         operationContext: {
             operation: op,
             preRunCommands: [
-                // the pulumi program gets written to disk via pre-run commands
-                `ls pulumi`,
-                `echo "$YAML_PROGRAM" | base64 -d | tee Pulumi.yaml`,
-                `echo "$STACK_YAML" | base64 -d  | tee Pulumi.dev.yaml`,
-                `ls`,
-                `cat Pulumi.yaml`
             ],
             environmentVariables: {
-                YAML_PROGRAM: Buffer.from(yamlProgram).toString('base64'), // pass the program as an env var
-                STACK_YAML: Buffer.from(stackYaml).toString('base64'), // pass the stack config as an env var
                 AWS_REGION: "us-west-2",
                 AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
                 AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
@@ -440,7 +424,7 @@ const run = async () => {
 
     // change this to your personal user or organization
     // org = "EvanBoyle";
-    org = process.env.ORG_NAME || "pulumi";
+    org = process.env.ORG_NAME || "ilumup";
 
     // override this to control the stack name
     stack = process.env.STACK_NAME || "dev";
@@ -449,10 +433,10 @@ const run = async () => {
     // You can alter this to point to a different pulumi program.
     // Edit the pulumi programs in the root level `/pulumi-programs` directory to create more cloud resources
     const deployments: DeploymentAction[] = [
-        {
-            project: "simple-resource",
-            op: "update",
-        },
+        // {
+        //     project: "simple-resource",
+        //     op: "update",
+        // },
         // {
         //     project: "bucket-time",
         //     op: "update",
@@ -465,10 +449,10 @@ const run = async () => {
         //     project: "go-bucket",
         //     op: "update",
         // },
-        // {
-        //     project: "yamlcaml",
-        //     op: "update",
-        // }
+        {
+            project: "yamlcaml",
+            op: "destroy",
+        }
     ];
 
     await execDeploymentsAndMonitorToCompletion(deployments);
