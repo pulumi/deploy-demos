@@ -1,3 +1,3 @@
 name: bucket-time
 runtime: nodejs
-description: awesome deployment api magic with aws
+description: awesome deployment api magic with aws that creates a bucket
