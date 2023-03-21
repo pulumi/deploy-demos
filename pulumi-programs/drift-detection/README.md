@@ -27,8 +27,8 @@ Drift detection can alert you to situations where someone has made manual edits 
     ```bash
     pulumi config set aws:region us-west-2
     pulumi config set --secret pulumiAccessToken xxxxxxxxxxxxxxxxx # your access token value
-    pulumi config set 'stack[0]' organization/project1/stack1
-    pulumi config set 'stack[1]' organization/project2/stack2
+    pulumi config set --path stacks[0] organization/project1/stack1
+    pulumi config set --path stacks[1] organization/project2/stack2
     ```
 
 1. Execute the Pulumi program:
