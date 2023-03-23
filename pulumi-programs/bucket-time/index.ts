@@ -6,7 +6,7 @@ import * as awsx from "@pulumi/awsx";
 const bucket = new aws.s3.Bucket("my-bucket");
 
 // Create a second S3 bucket
-const bucket = new aws.s3.Bucket("my-bucket-2");
+const bucket2 = new aws.s3.Bucket("my-bucket-2");
 
 // Export the name of the bucket
 export const bucketName = bucket.id;
