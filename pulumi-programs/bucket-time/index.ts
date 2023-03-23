@@ -10,3 +10,4 @@ const bucket2 = new aws.s3.Bucket("my-bucket-2");
 
 // Export the name of the bucket
 export const bucketName = bucket.id;
+export const bucketNmae2 = bucket2.id;
