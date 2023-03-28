@@ -29,7 +29,8 @@ This API enables many of the same scenarios as Automation API, like platform bui
 Deployment driver examples demonstrate how to use the Pulumi Deployment REST API to create deployments, monitor status, and tail logs.
 
 - [typescript-driver](./deployment-drivers/nodejs/typescript-driver) - a deployment driver written in Typescript. It can deploy Pulumi programs written in any language.
-- [Go CLI driver](./deployment-drivers/go/cli) - a deployment driver written in Typescript. It can deploy Pulumi programs written in any language.
+- [Go CLI driver](./deployment-drivers/go/cli) - a deployment driver written in Go. It can deploy Pulumi programs written in any language.
+- [Go HTTP server](./deployment-drivers/go/http) - an example of a REST API that implements CRUD operations for static websites using Pulumi Deployments to manage infrastructure.
 
 ### Platform Demos
 
