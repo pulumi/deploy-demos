@@ -1,12 +1,12 @@
 {
-    "name": "bucket-time",
-    "main": "index.ts",
+    "name": "aws-ts-s3-folder",
     "devDependencies": {
-        "@types/node": "^14"
+        "@types/node": "^10.0.0",
+        "@types/mime": "^2.0.3"
     },
     "dependencies": {
-        "@pulumi/pulumi": "^3.0.0",
         "@pulumi/aws": "^5.0.0",
-        "@pulumi/awsx": "^0.40.0"
+        "@pulumi/pulumi": "^3.0.0",
+        "mime": "^2.5.2"
     }
 }
