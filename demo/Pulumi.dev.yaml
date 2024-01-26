@@ -1,0 +1,8 @@
+config:
+  aws:region: us-west-2
+  kubernetes-aws-typescript:desiredClusterSize: "3"
+  kubernetes-aws-typescript:eksNodeInstanceType: t3.medium
+  kubernetes-aws-typescript:maxClusterSize: "6"
+  kubernetes-aws-typescript:minClusterSize: "3"
+  kubernetes-aws-typescript:vpcNetworkCidr: 10.0.0.0/16
+  pulumi:template: kubernetes-aws-typescript
