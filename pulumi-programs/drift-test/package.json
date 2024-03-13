@@ -1,0 +1,13 @@
+{
+    "name": "komal-drift-test",
+    "devDependencies": {
+	    "@types/node": "^18"
+    },
+    "dependencies": {
+	    "@pulumi/aws": "^6.0.0",
+	    "@pulumi/aws-apigateway": "^2.0.0",
+	    "@pulumi/awsx": "^2.0.2",
+	    "@pulumi/pulumi": "^3.49.0",
+	    "typescript": "^4.6.2"
+    }
+}
