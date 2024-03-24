@@ -1,8 +1,0 @@
-config:
-  aws:region: us-west-2
-  meagans-static-website-aws-typescript:errorDocument: error.html
-  meagans-static-website-aws-typescript:indexDocument: index.html
-  meagans-static-website-aws-typescript:path: ./www
-  pulumi:template: static-website-aws-typescript
-environment:
-  - meagan-workshop
