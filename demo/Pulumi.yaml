@@ -1,3 +1,0 @@
-name: kubernetes-aws-typescript
-runtime: nodejs
-description: A TypeScript program to deploy a Kubernetes cluster on AWS
