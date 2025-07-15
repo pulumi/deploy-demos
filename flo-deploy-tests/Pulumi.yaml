@@ -1,0 +1,12 @@
+name: magnetic-terbium-kiwi
+description: A minimal Random Pulumi YAML program.
+runtime: yaml
+resources:
+  username:
+    type: random:RandomPet
+outputs:
+  name: ${username.id}
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: random-yaml
