@@ -1,0 +1,10 @@
+name: mrg-random-py-git
+description: A minimal Random Python Pulumi program.
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: random-python
