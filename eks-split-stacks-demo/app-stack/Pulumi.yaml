@@ -1,0 +1,6 @@
+name: eks-app-stack
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: EKS cluster and Kubernetes workloads
