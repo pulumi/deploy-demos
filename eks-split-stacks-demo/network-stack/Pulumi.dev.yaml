@@ -1,0 +1,5 @@
+config:
+  aws:region: us-west-2
+  eks-network-stack:vpcNetworkCidr: 10.0.0.0/16
+environment:
+  - aws/pulumi-ce

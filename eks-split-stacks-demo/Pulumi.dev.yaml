@@ -1,0 +1,16 @@
+config:
+  aws-getting-started-k8s-py:desiredClusterSize: "3"
+  aws-getting-started-k8s-py:eksNodeInstanceType: t3.medium
+  aws-getting-started-k8s-py:maxClusterSize: "6"
+  aws-getting-started-k8s-py:minClusterSize: "3"
+  aws-getting-started-k8s-py:vpcNetworkCidr: 10.0.0.0/16
+  aws:region: us-west-2
+  eks-split-stacks-demo:desiredClusterSize: "3"
+  eks-split-stacks-demo:eksNodeInstanceType: t3.medium
+  eks-split-stacks-demo:maxClusterSize: "6"
+  eks-split-stacks-demo:minClusterSize: "3"
+  eks-split-stacks-demo:vpcNetworkCidr: 10.0.0.0/16
+  eks-split-stacks-demo:networkStackName: team-ce/eks-network-stack/dev
+environment:
+  - aws/pulumi-ce
+  - aws/pulumi-ce
