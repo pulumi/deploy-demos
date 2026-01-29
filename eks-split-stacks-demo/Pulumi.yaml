@@ -1,0 +1,6 @@
+name: eks-split-stacks-demo
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: Demo of splitting EKS infrastructure into multiple Pulumi stacks
