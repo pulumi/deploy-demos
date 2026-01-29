@@ -1,0 +1,92 @@
+"""App stack - EKS cluster and Kubernetes workloads.
+
+This stack references the network stack to get VPC and subnet information.
+"""
+
+import pulumi
+import pulumi_eks as eks
+import pulumi_kubernetes as k8s
+
+# Get configuration
+config = pulumi.Config()
+min_cluster_size = config.get_int("minClusterSize") or 3
+max_cluster_size = config.get_int("maxClusterSize") or 6
+desired_cluster_size = config.get_int("desiredClusterSize") or 3
+eks_node_instance_type = config.get("eksNodeInstanceType") or "t3.medium"
+
+# Reference the network stack to get VPC outputs
+network_stack_name = config.require("networkStackName")
+network_stack = pulumi.StackReference(network_stack_name)
+
+# Get VPC outputs from the network stack
+vpc_id = network_stack.get_output("vpcId")
+public_subnet_ids = network_stack.get_output("publicSubnetIds")
+private_subnet_ids = network_stack.get_output("privateSubnetIds")
+
+# Create the EKS cluster
+eks_cluster = eks.Cluster(
+    "eks-cluster",
+    # Put the cluster in the VPC from the network stack
+    vpc_id=vpc_id,
+    # Public subnets will be used for load balancers
+    public_subnet_ids=public_subnet_ids,
+    # Private subnets will be used for cluster nodes
+    private_subnet_ids=private_subnet_ids,
+    # Cluster configuration
+    instance_type=eks_node_instance_type,
+    desired_capacity=desired_cluster_size,
+    min_size=min_cluster_size,
+    max_size=max_cluster_size,
+    # Do not give worker nodes a public IP address
+    node_associate_public_ip_address=False,
+    # Change these values for a private cluster (VPN access required)
+    endpoint_private_access=False,
+    endpoint_public_access=True,
+)
+
+# Export cluster outputs
+pulumi.export("kubeconfig", eks_cluster.kubeconfig)
+pulumi.export("clusterName", eks_cluster.eks_cluster.name)
+
+# Create a Kubernetes provider using the cluster's kubeconfig
+k8s_provider = k8s.Provider("k8s-provider", kubeconfig=eks_cluster.kubeconfig)
+
+# Deploy nginx as a sample workload
+deployment = k8s.apps.v1.Deployment(
+    "nginx-deployment",
+    metadata=k8s.meta.v1.ObjectMetaArgs(
+        name="nginx-deployment",
+        labels={"app": "nginx"},
+    ),
+    spec=k8s.apps.v1.DeploymentSpecArgs(
+        replicas=1,
+        selector=k8s.meta.v1.LabelSelectorArgs(match_labels={"app": "nginx"}),
+        template=k8s.core.v1.PodTemplateSpecArgs(
+            metadata=k8s.meta.v1.ObjectMetaArgs(labels={"app": "nginx"}),
+            spec=k8s.core.v1.PodSpecArgs(
+                containers=[
+                    k8s.core.v1.ContainerArgs(
+                        name="nginx",
+                        image="nginx:1.25.2",
+                        ports=[k8s.core.v1.ContainerPortArgs(container_port=80)],
+                    )
+                ]
+            ),
+        ),
+    ),
+    opts=pulumi.ResourceOptions(provider=k8s_provider),
+)
+
+# Create a LoadBalancer service to expose nginx
+service = k8s.core.v1.Service(
+    "nginx-service",
+    metadata=k8s.meta.v1.ObjectMetaArgs(name="nginx-service"),
+    spec=k8s.core.v1.ServiceSpecArgs(
+        ports=[k8s.core.v1.ServicePortArgs(port=80, target_port=80)],
+        selector={"app": "nginx"},
+        type="LoadBalancer",
+    ),
+    opts=pulumi.ResourceOptions(provider=k8s_provider),
+)
+
+pulumi.export("url", service.status.load_balancer.ingress[0].hostname)

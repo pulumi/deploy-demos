@@ -1,0 +1,6 @@
+name: eks-network-stack
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: Network infrastructure (VPC, subnets) for EKS cluster

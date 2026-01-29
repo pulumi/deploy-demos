@@ -1,0 +1,9 @@
+config:
+  aws:region: us-west-2
+  eks-app-stack:networkStackName: team-ce/eks-network-stack/dev
+  eks-app-stack:desiredClusterSize: "3"
+  eks-app-stack:eksNodeInstanceType: t3.medium
+  eks-app-stack:maxClusterSize: "6"
+  eks-app-stack:minClusterSize: "3"
+environment:
+  - aws/pulumi-ce
