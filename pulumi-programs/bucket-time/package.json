@@ -1,6 +1,7 @@
 {
     "name": "bucket-time",
     "main": "index.ts",
+    "packageManager": "pnpm@10.33.2",
     "devDependencies": {
         "@types/node": "^14"
     },
