@@ -1,5 +1,8 @@
 allowBuilds:
   '@pulumi/aws': true
   '@pulumi/docker': true
+  # awsx v3 pulls this in; without it pnpm silently skips the postinstall that npm runs,
+  # which would understate pnpm's install time against npm rather than measure it.
+  '@pulumi/docker-build': true
   aws-sdk: true
   protobufjs: true
