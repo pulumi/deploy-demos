@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@pulumi/aws':
         specifier: ^7.37.0
-        version: 7.37.0
+        version: 7.38.0
       '@pulumi/pulumi':
         specifier: ^3.253.0
         version: 3.253.0
@@ -235,8 +235,8 @@ packages:
   '@protobufjs/utf8@1.1.2':
     resolution: {integrity: sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug==}
 
-  '@pulumi/aws@7.37.0':
-    resolution: {integrity: sha512-QpsXB+lcj9X28/B0Rn8uJPSR5i7+ISTNK4i4tt++RGIxgjNzM710/AKx+W7FTT86BbOHObJy/+75z80P0184Ag==}
+  '@pulumi/aws@7.38.0':
+    resolution: {integrity: sha512-lb9d3RYuOeiqYPr8FnC1aEnz0suVFBI5U+1NuuEh1UgVtDmHmpoSOwo2FOoP43VWokQAvBsxJf8Fdwr45GrSHw==}
 
   '@pulumi/pulumi@3.253.0':
     resolution: {integrity: sha512-riKRPh6hNCA/NRxVSOLx08c0rqgWYnKGOTgPZzCXi5TglVEERiXHW4U2DaTpP978FI1Xo1iqCa41vmd5i/PNHw==}
@@ -1135,7 +1135,7 @@ snapshots:
 
   '@protobufjs/utf8@1.1.2': {}
 
-  '@pulumi/aws@7.37.0':
+  '@pulumi/aws@7.38.0':
     dependencies:
       '@pulumi/pulumi': 3.253.0
       mime: 2.6.0
