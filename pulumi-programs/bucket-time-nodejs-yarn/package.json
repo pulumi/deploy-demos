@@ -1,0 +1,12 @@
+{
+    "name": "bucket-time-nodejs-yarn",
+    "main": "index.ts",
+    "packageManager": "yarn@1.22.22",
+    "devDependencies": {
+        "@types/node": "^26"
+    },
+    "dependencies": {
+        "@pulumi/pulumi": "^3.253.0",
+        "@pulumi/aws": "^7.37.0"
+    }
+}

@@ -1,0 +1,3 @@
+name: bucket-time-nodejs-yarn
+runtime: nodejs
+description: Minimal single-bucket program for dependency-install benchmarking

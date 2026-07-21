@@ -1,0 +1,12 @@
+[project]
+name = "bucket-time-python-poetry"
+version = "0.1.0"
+description = "Minimal single-S3-bucket benchmark fixture (Python, poetry)"
+requires-python = ">=3.10"
+dependencies = [
+    "pulumi>=3.253.0",
+    "pulumi-aws>=7.37.0",
+]
+
+[tool.poetry]
+package-mode = false

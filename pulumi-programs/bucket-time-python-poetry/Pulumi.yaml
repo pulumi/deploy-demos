@@ -1,0 +1,6 @@
+name: bucket-time-python-poetry
+runtime:
+  name: python
+  options:
+    toolchain: poetry
+description: Minimal single-S3-bucket benchmark fixture (Python, poetry)

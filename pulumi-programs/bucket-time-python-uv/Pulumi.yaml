@@ -1,0 +1,6 @@
+name: bucket-time-python-uv
+runtime:
+  name: python
+  options:
+    toolchain: uv
+description: Minimal single-S3-bucket benchmark fixture (Python, uv)

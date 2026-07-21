@@ -1,0 +1,6 @@
+name: bucket-time-python-pip
+runtime:
+  name: python
+  options:
+    toolchain: pip
+description: Minimal single-S3-bucket benchmark fixture (Python, pip)

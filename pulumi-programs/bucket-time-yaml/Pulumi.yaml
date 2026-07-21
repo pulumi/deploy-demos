@@ -1,0 +1,10 @@
+name: bucket-time-yaml
+runtime: yaml
+description: Minimal single-bucket program for dependency-install benchmarking
+
+resources:
+  bucket:
+    type: aws:s3:Bucket
+
+outputs:
+  bucketName: ${bucket.id}
