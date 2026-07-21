@@ -1,0 +1,17 @@
+name: bucket-time-yaml-pinned
+runtime: yaml
+description: >-
+  Byte-for-byte the bucket-time-yaml program except that the aws provider version is pinned.
+  Unpinned YAML has no version anywhere, so the engine calls GetLatestVersion over the network
+  before it can begin downloading; the A/B against bucket-time-yaml isolates what that costs.
+
+resources:
+  bucket:
+    type: aws:s3:Bucket
+    options:
+      version: "7.37.0"
+    properties:
+      bucketPrefix: kmosher-bench-
+
+outputs:
+  bucketName: ${bucket.id}
