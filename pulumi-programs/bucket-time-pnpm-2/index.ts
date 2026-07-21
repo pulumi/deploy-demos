@@ -1,8 +1,9 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 
-// Create an AWS resource (S3 Bucket)
-const bucket = new aws.s3.Bucket("bucket-time-bucket");
+// bucketPrefix rather than a fixed name: S3 names are globally unique, so a fixed name
+// would collide between parallel benchmark slots.
+const bucket = new aws.s3.Bucket("bucket-time-bucket", {
+    bucketPrefix: "kmosher-bench-",
+});
 
-// Export the name of the bucket
 export const bucketName = bucket.id;
