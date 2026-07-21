@@ -3,7 +3,7 @@ using Pulumi.Aws.S3;
 
 return await Deployment.RunAsync(() =>
 {
-    var bucket = new Bucket("my-bucket");
+    var bucket = new Bucket("bucket-time-bucket");
 
     return new Dictionary<string, object?>
     {

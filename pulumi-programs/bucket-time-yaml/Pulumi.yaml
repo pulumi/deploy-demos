@@ -1,10 +1,11 @@
 name: bucket-time-yaml
 runtime: yaml
-description: Minimal single-bucket program for dependency-install benchmarking
+description: Minimal single-S3-bucket benchmark fixture (YAML)
 
 resources:
-  bucket:
+  # Logical name avoids '-': YAML expressions like ${name.id} parse '-' as subtraction.
+  bucketTimeBucket:
     type: aws:s3:Bucket
 
 outputs:
-  bucketName: ${bucket.id}
+  bucketName: ${bucketTimeBucket.id}
