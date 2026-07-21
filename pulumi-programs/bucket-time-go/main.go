@@ -7,7 +7,9 @@ import (
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
-		bucket, err := s3.NewBucket(ctx, "bucket-time-bucket", nil)
+		bucket, err := s3.NewBucket(ctx, "bucket-time-bucket", &s3.BucketArgs{
+			BucketPrefix: pulumi.String("kmosher-bench-"),
+		})
 		if err != nil {
 			return err
 		}

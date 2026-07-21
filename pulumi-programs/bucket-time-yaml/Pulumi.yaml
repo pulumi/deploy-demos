@@ -3,9 +3,11 @@ runtime: yaml
 description: Minimal single-S3-bucket benchmark fixture (YAML)
 
 resources:
-  # Logical name avoids '-': YAML expressions like ${name.id} parse '-' as subtraction.
+  # Logical name avoids '-': YAML expressions parse '-' as subtraction in ${name.id}.
   bucketTimeBucket:
     type: aws:s3:Bucket
+    properties:
+      bucketPrefix: kmosher-bench-
 
 outputs:
   bucketName: ${bucketTimeBucket.id}
