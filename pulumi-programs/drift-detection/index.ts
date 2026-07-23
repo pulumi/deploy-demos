@@ -1,6 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
-import fetch from "node-fetch";
 
  const c = new pulumi.Config();
  // default to every five minutes
@@ -21,7 +20,7 @@ let pulumiAccessToken = c.requireSecret("pulumiAccessToken");
         const stack = parts[2];
         console.log(`refreshing stack: ${s}`);
 
-        const url = `https://api.pulumi.com/api/preview/${organization}/${project}/${stack}/deployments`
+        const url = `https://api.pulumi.com/api/stacks/${organization}/${project}/${stack}/deployments`
         const headers = {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
@@ -99,7 +98,7 @@ runtime: yaml
             const project = parts[1];
             const stack = parts[2];
             
-            const url = `https://api.pulumi.com/api/preview/${organization}/${project}/${stack}/deployments/${deploymentID}`;
+            const url = `https://api.pulumi.com/api/stacks/${organization}/${project}/${stack}/deployments/${deploymentID}`;
 
             const headers = {
                 'Accept': 'application/json',
