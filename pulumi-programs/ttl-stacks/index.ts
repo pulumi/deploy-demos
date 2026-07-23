@@ -1,10 +1,23 @@
 
-import * as awsx from "@pulumi/awsx";
+import * as apigateway from "@pulumi/aws-apigateway";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import fetch from "node-fetch";
+import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
 import * as crypto from "crypto";
+
+// Structural types matching the API Gateway proxy request/response shapes
+// (formerly awsx.apigateway.Request/Response).
+interface Request {
+    headers?: { [name: string]: string };
+    body: string | null;
+    isBase64Encoded: boolean;
+}
+
+interface Response {
+    statusCode: number;
+    body: string;
+}
 
 const config = new pulumi.Config();
 
@@ -16,7 +29,7 @@ const stackConfig = {
 };
 
 // Just logs information from an incoming webhook request.
-function logRequest(req: awsx.apigateway.Request) {
+function logRequest(req: Request) {
     const webhookID = req.headers !== undefined ? req.headers["pulumi-webhook-id"] : "";
     const webhookKind = req.headers !== undefined ? req.headers["pulumi-webhook-kind"] : "";
     console.log(`Received webhook from Pulumi ${webhookID} [${webhookKind}]`);
@@ -24,7 +37,7 @@ function logRequest(req: awsx.apigateway.Request) {
 
 // Webhooks can optionally be configured with a shared secret, so that webhook handlers like this app can authenticate
 // message integrity. Rejects any incoming requests that don't have a valid "pulumi-webhook-signature" header.
-function authenticateRequest(req: awsx.apigateway.Request): awsx.apigateway.Response | undefined {
+function authenticateRequest(req: Request): Response | undefined {
     const webhookSig = req.headers !== undefined ? req.headers["pulumi-webhook-signature"] : "";
     if (!stackConfig.sharedSecret || !webhookSig) {
         return undefined;
@@ -76,7 +89,7 @@ queue.onEvent("ttl-queue-processor", async (e) => {
         // a `pulumi.yaml` file needed for the destory, and run a pulumi refresh to hydrate the last applied config
         if (expiration < now) {
             console.log(`stack has expired, scheduling destroy: ${organization}/${project}/${stack}\n`)
-            const url = `https://api.pulumi.com/api/preview/${organization}/${project}/${stack}/deployments`
+            const url = `https://api.pulumi.com/api/stacks/${organization}/${project}/${stack}/deployments`
             const headers = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
@@ -144,22 +157,23 @@ runtime: nodejs
  * the ttl webhook processes all stack updates, looks up "ttl" tags, and schedules corresponding stacks for deletion
  * via messages in an SQS queue
  */
-const webhookHandler = new awsx.apigateway.API("ttl-webhook-handler", {
-    restApiArgs: {
-        binaryMediaTypes: ["application/json"],
-    },
+const webhookHandler = new apigateway.RestAPI("ttl-webhook-handler", {
+    binaryMediaTypes: ["application/json"],
     routes: [{
         path: "/",
         method: "GET",
-        eventHandler: async () => ({
-            statusCode: 200,
-            body: "🍹 Pulumi Webhook Responder🍹\n",
+        eventHandler: new aws.lambda.CallbackFunction("ttl-webhook-get", {
+            callback: async () => ({
+                statusCode: 200,
+                body: "🍹 Pulumi Webhook Responder🍹\n",
+            }),
         }),
     }, {
         path: "/",
         method: "POST",
 
-        eventHandler: async (req) => {
+        eventHandler: new aws.lambda.CallbackFunction("ttl-webhook-post", {
+            callback: async (req: Request): Promise<Response> => {
             logRequest(req);
             const authenticateResult = authenticateRequest(req);
             if (authenticateResult) {
@@ -227,24 +241,17 @@ const webhookHandler = new awsx.apigateway.API("ttl-webhook-handler", {
                     QueueUrl: queue.url.get(),
                 };
 
-                const sqsClient = new aws.sdk.SQS();
+                const sqsClient = new SQSClient();
 
-                await new Promise((resolve, reject) => {
-                    sqsClient.sendMessage(params, (err, data) => {
-                        if (err) {
-                            console.log(err);
-                            reject(err)
-                        }
-                        console.log(`scheduled cleanup for stack ${organization}/${project}/${stack} at ${time.toUTCString()}!\n`)
-                        resolve(data);
-                    });
-                });
+                await sqsClient.send(new SendMessageCommand(params));
+                console.log(`scheduled cleanup for stack ${organization}/${project}/${stack} at ${time.toUTCString()}!\n`)
 
                 return { statusCode: 200, body: `scheduled cleanup for stack ${organization}/${project}/${stack}\n` };
             }
 
             return { statusCode: 200, body: `noop!\n` };
-        },
+            },
+        }),
     }],
 });
 
