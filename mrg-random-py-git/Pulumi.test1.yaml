@@ -1,4 +1,0 @@
-config:
-  pulumi:template: random-python
-environment:
-  - default/ce
