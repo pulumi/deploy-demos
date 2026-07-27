@@ -8,13 +8,9 @@ const computeCodePaths = async (code: string) => {
         ["__index.js"]: new pulumi.asset.StringAsset(code),
     };
 
-    // The Node 16 runtime preinstalled AWS SDK v2, so `aws-sdk` used to be excluded
-    // from the bundle as dead weight. Node 18 onwards ships neither v2 nor v3, so
-    // anything the handler imports has to be bundled — excluding it here would turn
-    // a working handler into a MODULE_NOT_FOUND at invoke time.
-    let codePathOptions: any = {};
-
-    const modulePaths = await pulumi.runtime.computeCodePaths(codePathOptions);
+    // Node 18+ runtimes ship no bundled AWS SDK, so everything the handler imports
+    // must be bundled.
+    const modulePaths = await pulumi.runtime.computeCodePaths({});
 
     for (const [path, asset] of modulePaths) {
         codePaths[path] = asset;

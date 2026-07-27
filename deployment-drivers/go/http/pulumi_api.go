@@ -220,6 +220,8 @@ func (c *pulumiClient) listStackDeployments(ctx context.Context, org, project, s
 	return &respBody, nil
 }
 
+// getStackCurrentDeploymentStatus returns the status of the stack's most recent
+// deployment, or "" if the stack has no deployment history.
 func (c *pulumiClient) getStackCurrentDeploymentStatus(ctx context.Context, org, project, stack string) (string, error) {
 	// Deployments are listed newest-first, so the first item of the first
 	// page is the most recent deployment.

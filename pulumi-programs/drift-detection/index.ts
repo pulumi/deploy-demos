@@ -1,16 +1,14 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 
- const c = new pulumi.Config();
- // default to every five minutes
+const c = new pulumi.Config();
+// default to every five minutes
 let schedule = c.get("schedule") || "cron(0/5 * * * ? *)";
 // list of stacks to run drift detection over
 let stacks: string[] = c.requireObject("stacks");
 let pulumiAccessToken = c.requireSecret("pulumiAccessToken");
 
- // A refresh of several stacks routinely takes longer than the 180s CallbackFunction
- // default, which would kill this mid-poll and report no drift on a healthy schedule.
- aws.cloudwatch.onSchedule("drift-lambda", schedule, async() => {
+aws.cloudwatch.onSchedule("drift-lambda", schedule, async() => {
     let outstandingDeploymentIDs: string[] = [];
     let deploymentToStack: {[key: string]: string}= {};
     let deploymentToURL: {[key: string]: string}= {};
@@ -95,7 +93,8 @@ runtime: yaml
 
     // Bound the poll so a deployment that never reaches a terminal state can't spin
     // until the lambda times out with no drift report for any stack in the batch.
-    // Must stay under the function timeout above or it can never fire.
+    // Must stay under the lambda's 900s timeout, set on the onSchedule options at the
+    // bottom of this file, or it can never fire.
     const pollDeadline = Date.now() + 14 * 60 * 1000;
 
     while(outstandingDeploymentIDs.length) {
@@ -136,7 +135,8 @@ runtime: yaml
             const status = deployment.status;
             // Enumerate the in-flight states rather than the terminal ones: a deployment
             // that ends up aborted or skipped is finished, and treating it as outstanding
-            // would hang the whole batch.
+            // would hang the whole batch. The full status set is spelled out in
+            // deployment-drivers/go/http/pulumi_api_live_test.go.
             if(["not-started", "accepted", "running"].indexOf(status) === -1){
                 completedDeployments.push(deploymentID);
                 if(status=== "failed") {
@@ -164,5 +164,7 @@ runtime: yaml
     function delay(ms: number) {
         return new Promise( resolve => setTimeout(resolve, ms) );
     }
+ // A refresh of several stacks routinely takes longer than the 180s CallbackFunction
+ // default, which would kill this mid-poll and report no drift on a healthy schedule.
  }, { timeout: 900 });
 

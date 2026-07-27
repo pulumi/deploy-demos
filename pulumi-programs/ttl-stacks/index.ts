@@ -63,10 +63,7 @@ type ttlMessage = {
     expiration: string;
 }
 
-// Messages that can never succeed land here instead of redriving until the queue's
-// retention expires. A stack whose destroy is rejected permanently — revoked token,
-// stack already gone — would otherwise retake the same failing branch for days.
-// Retention is raised from the 4-day default so evidence survives a long weekend:
+// Retention is raised from the 4-day default so evidence survives a long weekend —
 // a message here is a stack that will never be destroyed.
 const deadLetterQueue = new aws.sqs.Queue("ttl-dlq", {
     messageRetentionSeconds: 1209600, // 14 days
@@ -98,8 +95,6 @@ const queue = new aws.sqs.Queue("ttl-queue", {
 
 // This processor looks at messages one at a time. Expired stacks are destroyed via the
 // Pulumi Deployments API; stacks that are not yet expired are re-queued with a delay.
-// Only a genuine failure throws, so the queue's dead-letter threshold measures failures
-// rather than elapsed waiting time.
 queue.onEvent("ttl-queue-processor", async (e) => {
     console.log("queue processor running");
     for (let rec of e.Records) {
@@ -192,8 +187,8 @@ runtime: nodejs
         const secondsUntilExpiry = Math.ceil((expiration.getTime() - now.getTime()) / 1000);
         const delaySeconds = Math.min(900, Math.max(0, secondsUntilExpiry));
 
-        // Derive the queue URL from the event rather than closing over `queue`, which
-        // would make the handler capture the resource it is attached to.
+        // This handler is the queue's own event handler, so closing over `queue` would be
+        // circular. Derive the URL from the event instead.
         const [, , , region, accountId, queueName] = rec.eventSourceARN.split(":");
         const queueUrl = `https://sqs.${region}.amazonaws.com/${accountId}/${queueName}`;
 
@@ -230,82 +225,82 @@ const webhookHandler = new apigateway.RestAPI("ttl-webhook-handler", {
 
         eventHandler: new aws.lambda.CallbackFunction("ttl-webhook-post", {
             callback: async (req: Request): Promise<Response> => {
-            logRequest(req);
-            const authenticateResult = authenticateRequest(req);
-            if (authenticateResult) {
-                return authenticateResult;
-            }
-
-            const webhookKind = req.headers !== undefined ? req.headers["pulumi-webhook-kind"] : "";
-            const bytes = req.body!.toString();
-            const payload = Buffer.from(bytes, "base64").toString();
-            const parsedPayload = JSON.parse(payload);
-
-            if (webhookKind === "stack_update" && parsedPayload.kind === "update") {
-
-                let organization = parsedPayload.organization.name;
-                let stack = parsedPayload.stackName;
-                let project = parsedPayload.projectName;
-
-
-                console.log(`processing update handler for stack: ${organization}/${project}/${stack}!\n`)
-
-                const url = `https://api.pulumi.com/api/stacks/${organization}/${project}/${stack}`
-                const headers = {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Authorization': `token ${stackConfig.pulumiAccessToken.get()}`
-                };
-                const response = await fetch(url, {
-                    method: "GET",
-                    headers
-                });
-
-
-                if (!response.ok) {
-                    let errMessage = "";
-                    try {
-                        errMessage = await response.text();
-                    } catch { }
-                    throw new Error(`failed to get stack ${organization}/${project}/${stack}: ${response.status} ${errMessage}`)
+                logRequest(req);
+                const authenticateResult = authenticateRequest(req);
+                if (authenticateResult) {
+                    return authenticateResult;
                 }
 
-                const stackResult = await response.json();
-                const ttlTag = (stackResult as any)?.tags?.ttl;
-                if (!ttlTag) {
-                    console.log(`no ttl tag found for stack: ${organization}/${project}/${stack}!\n`)
-                    return { statusCode: 200, body: `noop for stack ${organization}/${project}/${stack}!\n` };
+                const webhookKind = req.headers !== undefined ? req.headers["pulumi-webhook-kind"] : "";
+                const bytes = req.body!.toString();
+                const payload = Buffer.from(bytes, "base64").toString();
+                const parsedPayload = JSON.parse(payload);
+
+                if (webhookKind === "stack_update" && parsedPayload.kind === "update") {
+
+                    let organization = parsedPayload.organization.name;
+                    let stack = parsedPayload.stackName;
+                    let project = parsedPayload.projectName;
+
+
+                    console.log(`processing update handler for stack: ${organization}/${project}/${stack}!\n`)
+
+                    const url = `https://api.pulumi.com/api/stacks/${organization}/${project}/${stack}`
+                    const headers = {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `token ${stackConfig.pulumiAccessToken.get()}`
+                    };
+                    const response = await fetch(url, {
+                        method: "GET",
+                        headers
+                    });
+
+
+                    if (!response.ok) {
+                        let errMessage = "";
+                        try {
+                            errMessage = await response.text();
+                        } catch { }
+                        throw new Error(`failed to get stack ${organization}/${project}/${stack}: ${response.status} ${errMessage}`)
+                    }
+
+                    const stackResult = await response.json();
+                    const ttlTag = (stackResult as any)?.tags?.ttl;
+                    if (!ttlTag) {
+                        console.log(`no ttl tag found for stack: ${organization}/${project}/${stack}!\n`)
+                        return { statusCode: 200, body: `noop for stack ${organization}/${project}/${stack}!\n` };
+                    }
+
+                    console.log(`ttl tag found for stack, queueing SQS message: ${organization}/${project}/${stack}!\n`)
+
+                    let time = new Date();
+                    const expirationMinutes = parseInt(ttlTag) || 30;
+                    time = new Date(time.getTime() + 60000 * expirationMinutes);
+
+                    const message = {
+                        stack,
+                        project,
+                        organization,
+                        expiration: time.toISOString(),
+                    }
+
+                    const params = {
+                        // Remove DelaySeconds parameter and value for FIFO queues
+                        DelaySeconds: 10,
+                        MessageBody: JSON.stringify(message),
+                        QueueUrl: queue.url.get(),
+                    };
+
+                    const sqsClient = new SQSClient();
+
+                    await sqsClient.send(new SendMessageCommand(params));
+                    console.log(`scheduled cleanup for stack ${organization}/${project}/${stack} at ${time.toUTCString()}!\n`)
+
+                    return { statusCode: 200, body: `scheduled cleanup for stack ${organization}/${project}/${stack}\n` };
                 }
 
-                console.log(`ttl tag found for stack, queueing SQS message: ${organization}/${project}/${stack}!\n`)
-
-                let time = new Date();
-                const expirationMinutes = parseInt(ttlTag) || 30;
-                time = new Date(time.getTime() + 60000 * expirationMinutes);
-
-                const message = {
-                    stack,
-                    project,
-                    organization,
-                    expiration: time.toISOString(),
-                }
-
-                const params = {
-                    // Remove DelaySeconds parameter and value for FIFO queues
-                    DelaySeconds: 10,
-                    MessageBody: JSON.stringify(message),
-                    QueueUrl: queue.url.get(),
-                };
-
-                const sqsClient = new SQSClient();
-
-                await sqsClient.send(new SendMessageCommand(params));
-                console.log(`scheduled cleanup for stack ${organization}/${project}/${stack} at ${time.toUTCString()}!\n`)
-
-                return { statusCode: 200, body: `scheduled cleanup for stack ${organization}/${project}/${stack}\n` };
-            }
-
-            return { statusCode: 200, body: `noop!\n` };
+                return { statusCode: 200, body: `noop!\n` };
             },
         }),
     }],
