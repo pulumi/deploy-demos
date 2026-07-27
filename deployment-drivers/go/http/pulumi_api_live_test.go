@@ -30,7 +30,7 @@ func liveClient(t *testing.T) (*pulumiClient, string, string, string) {
 
 func TestLiveListStackDeployments(t *testing.T) {
 	c, org, project, stack := liveClient(t)
-	resp, err := c.listStackDeployments(context.Background(), org, project, stack, 1)
+	resp, err := c.listStackDeployments(context.Background(), org, project, stack)
 	if err != nil {
 		t.Fatalf("listStackDeployments: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestLiveGetStackCurrentDeploymentStatus(t *testing.T) {
 	// An empty status is only correct for a stack with no deployment history; on a
 	// stack that has one it means the decode dropped the field, which is the failure
 	// this test exists to catch. Tie the two together rather than tolerating "".
-	resp, err := c.listStackDeployments(context.Background(), org, project, stack, 1)
+	resp, err := c.listStackDeployments(context.Background(), org, project, stack)
 	if err != nil {
 		t.Fatalf("listStackDeployments: %v", err)
 	}

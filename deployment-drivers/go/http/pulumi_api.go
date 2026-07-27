@@ -193,13 +193,14 @@ func (c *pulumiClient) createDeployment(ctx context.Context, org, project, stack
 	}
 }
 
-func (c *pulumiClient) listStackDeployments(ctx context.Context, org, project, stack string, page int) (*listDeploymentsResponse, error) {
+// listStackDeployments returns the first page of the stack's deployments, newest first.
+func (c *pulumiClient) listStackDeployments(ctx context.Context, org, project, stack string) (*listDeploymentsResponse, error) {
 	resp, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Authorization", "token "+c.token).
 		SetHeader("Accept", "application/json").
 		SetDoNotParseResponse(true).
-		Get(pulumiURL + path.Join("/stacks", org, project, stack, fmt.Sprintf("deployments?page=%v", page)))
+		Get(pulumiURL + path.Join("/stacks", org, project, stack, "deployments?page=1"))
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +226,7 @@ func (c *pulumiClient) listStackDeployments(ctx context.Context, org, project, s
 func (c *pulumiClient) getStackCurrentDeploymentStatus(ctx context.Context, org, project, stack string) (string, error) {
 	// Deployments are listed newest-first, so the first item of the first
 	// page is the most recent deployment.
-	deployments, err := c.listStackDeployments(ctx, org, project, stack, 1)
+	deployments, err := c.listStackDeployments(ctx, org, project, stack)
 	if err != nil {
 		return "", err
 	}

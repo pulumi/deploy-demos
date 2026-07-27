@@ -12,8 +12,19 @@ let pulumiAccessToken = c.requireSecret("pulumiAccessToken");
 // default, which would kill this mid-poll and report no drift on a healthy schedule.
 // The function is built explicitly to raise that: onSchedule takes an args parameter
 // but ignores it — EventRuleEventSubscriptionArgs has no fields at all.
+const LAMBDA_TIMEOUT_SECONDS = 900;
+
+// Give up a minute before the lambda is killed, so the loop throws an error naming the
+// stacks it was still waiting on instead of dying silently mid-poll.
+const POLL_BUDGET_MS = (LAMBDA_TIMEOUT_SECONDS - 60) * 1000;
+
+// Statuses a deployment can still move on from; anything else is finished. Enumerated this
+// way round so an aborted or skipped deployment doesn't hang the batch. The full status set
+// is spelled out in deployment-drivers/go/http/pulumi_api_live_test.go.
+const IN_FLIGHT = ["not-started", "accepted", "running"];
+
 const driftLambda = new aws.lambda.CallbackFunction("drift-lambda", {
-    timeout: 900,
+    timeout: LAMBDA_TIMEOUT_SECONDS,
     callback: async() => {
         let outstandingDeploymentIDs: string[] = [];
         let deploymentToStack: {[key: string]: string}= {};
@@ -96,10 +107,7 @@ runtime: yaml
             deploymentToURL[deployment.id] = deployment.consoleUrl;
         }
 
-        // Bound the poll so a deployment that never reaches a terminal state can't spin
-        // until the lambda times out with no drift report for any stack in the batch.
-        // Must stay under the function's 900s timeout, set above, or it can never fire.
-        const pollDeadline = Date.now() + 14 * 60 * 1000;
+        const pollDeadline = Date.now() + POLL_BUDGET_MS;
 
         while(outstandingDeploymentIDs.length) {
             if (Date.now() > pollDeadline) {
@@ -137,11 +145,7 @@ runtime: yaml
     
                 const deployment = await response.json();
                 const status = deployment.status;
-                // Enumerate the in-flight states rather than the terminal ones: a deployment
-                // that ends up aborted or skipped is finished, and treating it as outstanding
-                // would hang the whole batch. The full status set is spelled out in
-                // deployment-drivers/go/http/pulumi_api_live_test.go.
-                if(["not-started", "accepted", "running"].indexOf(status) === -1){
+                if(!IN_FLIGHT.includes(status)){
                     completedDeployments.push(deploymentID);
                     if(status=== "failed") {
                         // assume all failures are due to drift

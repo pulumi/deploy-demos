@@ -56,6 +56,9 @@ function authenticateRequest(req: Request): Response | undefined {
     return undefined;
 }
 
+// The most SQS will hold a delayed message for.
+const SQS_MAX_DELAY_SECONDS = 900;
+
 type ttlMessage = {
     organization: string;
     project: string;
@@ -93,9 +96,47 @@ const queue = new aws.sqs.Queue("ttl-queue", {
     }),
 });
 
+// Left to itself a CallbackFunction attaches ten FullAccess managed policies, including
+// AmazonSQSFullAccess on every queue in the account. Each function here gets a role with
+// nothing but log writes and the specific queue actions it makes.
+function lambdaRole(name: string, queueActions: string[]): aws.iam.Role {
+    const role = new aws.iam.Role(`${name}-role`, {
+        assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({ Service: "lambda.amazonaws.com" }),
+        managedPolicyArns: [aws.iam.ManagedPolicy.AWSLambdaBasicExecutionRole],
+    });
+    if (queueActions.length > 0) {
+        new aws.iam.RolePolicy(`${name}-queue-access`, {
+            role: role.name,
+            policy: {
+                Version: "2012-10-17",
+                Statement: [{
+                    Effect: "Allow",
+                    Action: queueActions,
+                    Resource: queue.arn,
+                }],
+            },
+        });
+    }
+    return role;
+}
+
+// The event source mapping polls on the function's behalf, so the processor needs the read
+// side as well as SendMessage for the re-queue of a stack that hasn't expired yet.
+const processorRole = lambdaRole("ttl-queue-processor", [
+    "sqs:ReceiveMessage",
+    "sqs:DeleteMessage",
+    "sqs:GetQueueAttributes",
+    "sqs:SendMessage",
+]);
+
 // This processor looks at messages one at a time. Expired stacks are destroyed via the
 // Pulumi Deployments API; stacks that are not yet expired are re-queued with a delay.
-queue.onEvent("ttl-queue-processor", async (e) => {
+//
+// The function is built explicitly rather than passed as a bare closure because onEvent's
+// args only reach the event source mapping — there is no way to set the role through it.
+queue.onEvent("ttl-queue-processor", new aws.lambda.CallbackFunction("ttl-queue-processor", {
+    role: processorRole,
+    callback: async (e: aws.sqs.QueueEvent) => {
     console.log("queue processor running");
     for (let rec of e.Records) {
         const message = JSON.parse(rec.body)
@@ -182,9 +223,9 @@ runtime: nodejs
         // failing it would make SQS's receive count track how long we have been
         // waiting rather than whether anything is wrong, so the dead-letter threshold
         // below would fire on healthy stacks with a TTL longer than a few minutes.
-        // SQS caps DelaySeconds at 900, so long TTLs simply round-trip more than once.
+        // A TTL longer than SQS's delay ceiling simply round-trips more than once.
         const secondsUntilExpiry = Math.ceil((expiration.getTime() - now.getTime()) / 1000);
-        const delaySeconds = Math.min(900, Math.max(0, secondsUntilExpiry));
+        const delaySeconds = Math.min(SQS_MAX_DELAY_SECONDS, Math.max(0, secondsUntilExpiry));
 
         // Can't use `queue.url.get()` here as the webhook handler below does: this closure
         // is the queue's own event handler, so referencing it would be a cycle. Recover the
@@ -199,7 +240,8 @@ runtime: nodejs
         }));
         console.log(`not yet expired, re-queued for ${delaySeconds}s: ${organization}/${project}/${stack} (expires ${expiration.toISOString()})\n`);
     }
-}, {
+    },
+}), {
     batchSize: 1,
     maximumBatchingWindowInSeconds: 0,
 });
@@ -214,6 +256,7 @@ const webhookHandler = new apigateway.RestAPI("ttl-webhook-handler", {
         path: "/",
         method: "GET",
         eventHandler: new aws.lambda.CallbackFunction("ttl-webhook-get", {
+            role: lambdaRole("ttl-webhook-get", []),
             callback: async () => ({
                 statusCode: 200,
                 body: "🍹 Pulumi Webhook Responder🍹\n",
@@ -224,6 +267,7 @@ const webhookHandler = new apigateway.RestAPI("ttl-webhook-handler", {
         method: "POST",
 
         eventHandler: new aws.lambda.CallbackFunction("ttl-webhook-post", {
+            role: lambdaRole("ttl-webhook-post", ["sqs:SendMessage"]),
             callback: async (req: Request): Promise<Response> => {
                 logRequest(req);
                 const authenticateResult = authenticateRequest(req);
