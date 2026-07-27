@@ -65,9 +65,27 @@ type ttlMessage = {
 
 // Messages that can never succeed land here instead of redriving until the queue's
 // retention expires. A stack whose destroy is rejected permanently — revoked token,
-// stack already gone — is past its expiration on every redelivery, so it would
-// otherwise retake the same failing branch for days.
-const deadLetterQueue = new aws.sqs.Queue("ttl-dlq");
+// stack already gone — would otherwise retake the same failing branch for days.
+// Retention is raised from the 4-day default so evidence survives a long weekend:
+// a message here is a stack that will never be destroyed.
+const deadLetterQueue = new aws.sqs.Queue("ttl-dlq", {
+    messageRetentionSeconds: 1209600, // 14 days
+});
+
+// A dead-letter queue nobody watches turns a loud failure into a silent leak, which is
+// the exact failure mode this program exists to prevent. Alarm on the first message.
+new aws.cloudwatch.MetricAlarm("ttl-dlq-not-empty", {
+    alarmDescription: "ttl-stacks dead-letter queue is non-empty: one or more stacks will never be destroyed.",
+    namespace: "AWS/SQS",
+    metricName: "ApproximateNumberOfMessagesVisible",
+    dimensions: { QueueName: deadLetterQueue.name },
+    statistic: "Maximum",
+    period: 300,
+    evaluationPeriods: 1,
+    comparisonOperator: "GreaterThanOrEqualToThreshold",
+    threshold: 1,
+    treatMissingData: "notBreaching",
+});
 
 // the queue for scheduling stack deletion
 const queue = new aws.sqs.Queue("ttl-queue", {
@@ -78,12 +96,12 @@ const queue = new aws.sqs.Queue("ttl-queue", {
     }),
 });
 
-// this processor looks for messages in the queue one at a time that have passed their expiry.
-// if a message has not passed it's expriy, then it throws an error so the message gets retried.
-// expired messages trigger destroy operations via the pulumi deployment api.
+// This processor looks at messages one at a time. Expired stacks are destroyed via the
+// Pulumi Deployments API; stacks that are not yet expired are re-queued with a delay.
+// Only a genuine failure throws, so the queue's dead-letter threshold measures failures
+// rather than elapsed waiting time.
 queue.onEvent("ttl-queue-processor", async (e) => {
     console.log("queue processor running");
-    const messagesToRetry = [];
     for (let rec of e.Records) {
         const message = JSON.parse(rec.body)
         const organization = message.organization;
@@ -166,11 +184,25 @@ runtime: nodejs
             continue;
         }
 
-        messagesToRetry.push({ "itemIdentifier": rec.messageId });
-        // if we're not past the expiry, we'll just throw an error so the message gets reprocessed.
-        // TODO: we should process more than one message per run and 
-        // should return partial batch success pending https://github.com/pulumi/pulumi-aws/issues/2048
-        throw new Error(`waitng until ${expiration} to destroy stack ${organization}/${project}/${stack}!\n`)
+        // Not expired yet. Re-enqueue with a delay rather than failing the message:
+        // failing it would make SQS's receive count track how long we have been
+        // waiting rather than whether anything is wrong, so the dead-letter threshold
+        // below would fire on healthy stacks with a TTL longer than a few minutes.
+        // SQS caps DelaySeconds at 900, so long TTLs simply round-trip more than once.
+        const secondsUntilExpiry = Math.ceil((expiration.getTime() - now.getTime()) / 1000);
+        const delaySeconds = Math.min(900, Math.max(0, secondsUntilExpiry));
+
+        // Derive the queue URL from the event rather than closing over `queue`, which
+        // would make the handler capture the resource it is attached to.
+        const [, , , region, accountId, queueName] = rec.eventSourceARN.split(":");
+        const queueUrl = `https://sqs.${region}.amazonaws.com/${accountId}/${queueName}`;
+
+        await new SQSClient().send(new SendMessageCommand({
+            DelaySeconds: delaySeconds,
+            MessageBody: rec.body,
+            QueueUrl: queueUrl,
+        }));
+        console.log(`not yet expired, re-queued for ${delaySeconds}s: ${organization}/${project}/${stack} (expires ${expiration.toISOString()})\n`);
     }
 }, {
     batchSize: 1,

@@ -129,6 +129,11 @@ func (s *siteServer) create(w http.ResponseWriter, r *http.Request, _ httprouter
 			// pulumi-aws v7 no longer falls back to AWS_REGION, so the region has to
 			// reach the provider as stack config. Setting it here rather than as a
 			// project default in the program keeps the -region flag authoritative.
+			//
+			// Only new sites get this: settings are written once, at create, and
+			// updates inherit what was persisted then. Sites created before this
+			// change fall back to the project default in static-site/Pulumi.yaml,
+			// so a driver running with a non-default -region will not relocate them.
 			PreRunCommands: []string{
 				fmt.Sprintf("pulumi config set aws:region %s", s.region),
 			},

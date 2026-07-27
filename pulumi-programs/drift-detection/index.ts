@@ -8,6 +8,8 @@ let schedule = c.get("schedule") || "cron(0/5 * * * ? *)";
 let stacks: string[] = c.requireObject("stacks");
 let pulumiAccessToken = c.requireSecret("pulumiAccessToken");
 
+ // A refresh of several stacks routinely takes longer than the 180s CallbackFunction
+ // default, which would kill this mid-poll and report no drift on a healthy schedule.
  aws.cloudwatch.onSchedule("drift-lambda", schedule, async() => {
     let outstandingDeploymentIDs: string[] = [];
     let deploymentToStack: {[key: string]: string}= {};
@@ -93,7 +95,8 @@ runtime: yaml
 
     // Bound the poll so a deployment that never reaches a terminal state can't spin
     // until the lambda times out with no drift report for any stack in the batch.
-    const pollDeadline = Date.now() + 10 * 60 * 1000;
+    // Must stay under the function timeout above or it can never fire.
+    const pollDeadline = Date.now() + 14 * 60 * 1000;
 
     while(outstandingDeploymentIDs.length) {
         if (Date.now() > pollDeadline) {
@@ -161,5 +164,5 @@ runtime: yaml
     function delay(ms: number) {
         return new Promise( resolve => setTimeout(resolve, ms) );
     }
- });
+ }, { timeout: 900 });
 
