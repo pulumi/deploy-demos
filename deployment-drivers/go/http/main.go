@@ -84,12 +84,12 @@ func (s *siteServer) updateStack(ctx context.Context, stack, content string) err
 // create implements the Create operation for a static site.
 //
 // The Create operation has three steps:
-// 1. Create the underlying Pulumi stack for the static site. The name of the stack will be the name of the site.
-// 2. Configure deployments for the Pulumi stack. Deployments will use the program at the configured GitHub repository,
-//    branch, and directory, will obtain temporary credentials via OIDC using the configured AWS IAM Role ARN and
-//    session name, and will deploy to the configured region. Furthermore, deployments will run if the Pulumi program
-//    is updated by commits that are pushed to its branch and affect files in its directory.
-// 3. Using the Deployments API, start a deployment using for the Pulumi stack that will run the initial update.
+//  1. Create the underlying Pulumi stack for the static site. The name of the stack will be the name of the site.
+//  2. Configure deployments for the Pulumi stack. Deployments will use the program at the configured GitHub repository,
+//     branch, and directory, will obtain temporary credentials via OIDC using the configured AWS IAM Role ARN and
+//     session name, and will deploy to the configured region. Furthermore, deployments will run if the Pulumi program
+//     is updated by commits that are pushed to its branch and affect files in its directory.
+//  3. Using the Deployments API, start a deployment using for the Pulumi stack that will run the initial update.
 func (s *siteServer) create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var create createSiteRequest
 	if err := json.NewDecoder(r.Body).Decode(&create); err != nil {
@@ -126,6 +126,12 @@ func (s *siteServer) create(w http.ResponseWriter, r *http.Request, _ httprouter
 			},
 		},
 		OperationContext: &operationContext{
+			// pulumi-aws v7 no longer falls back to AWS_REGION, so the region has to
+			// reach the provider as stack config. Setting it here rather than as a
+			// project default in the program keeps the -region flag authoritative.
+			PreRunCommands: []string{
+				fmt.Sprintf("pulumi config set aws:region %s", s.region),
+			},
 			Environment: map[string]string{
 				"AWS_REGION": s.region,
 			},

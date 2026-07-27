@@ -54,6 +54,12 @@ $ pulumi up
 
 You should now be able to `pulumi stack tag set ttl X && pulumi up` (X=minutes) to create stacks that destroy themselves after the specified expiry.
 
+> **Upgrading an existing deployment:** the API Gateway and its Lambdas are now
+> declared with `@pulumi/aws-apigateway` instead of `@pulumi/awsx`, which replaces
+> them and mints a **new invoke URL**. Re-run `pulumi stack output url` after
+> `pulumi up` and update the Payload URL on your Pulumi webhook. Until you do, the
+> webhook posts to the old endpoint and expired stacks are silently never destroyed.
+
 
 ## Architecture
 

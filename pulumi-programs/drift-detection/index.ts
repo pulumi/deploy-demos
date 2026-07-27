@@ -35,6 +35,9 @@ runtime: yaml
 
         const payload = {
             operation: "preview",
+            // This payload is self-contained — it supplies its own sourceContext,
+            // credentials, and pre-run commands — so deliberately do not inherit the
+            // target stack's configured deployment settings.
             inheritSettings: false,
             sourceContext: {
                 git: {
@@ -79,7 +82,7 @@ runtime: yaml
             try {
                 errMessage = await response.text();
             } catch { }
-            throw new Error(`failed to queue refresh: ${errMessage}`)
+            throw new Error(`failed to queue refresh for ${s}: ${response.status} ${errMessage}`)
         }
 
         const deployment = await response.json();
@@ -88,7 +91,14 @@ runtime: yaml
         deploymentToURL[deployment.id] = deployment.consoleUrl;
     }
 
+    // Bound the poll so a deployment that never reaches a terminal state can't spin
+    // until the lambda times out with no drift report for any stack in the batch.
+    const pollDeadline = Date.now() + 10 * 60 * 1000;
+
     while(outstandingDeploymentIDs.length) {
+        if (Date.now() > pollDeadline) {
+            throw new Error(`timed out waiting for deployments: ${outstandingDeploymentIDs.map(id => deploymentToStack[id]).join(", ")}`);
+        }
         await delay(2000);
         let completedDeployments: string[]= [];
         for(let deploymentID of outstandingDeploymentIDs) {
@@ -116,12 +126,15 @@ runtime: yaml
                 try {
                     errMessage = await response.text();
                 } catch { }
-                throw new Error(`failed to get stack: ${errMessage}`)
+                throw new Error(`failed to get deployment ${deploymentID}: ${response.status} ${errMessage}`)
             }
     
             const deployment = await response.json();
             const status = deployment.status;
-            if(["succeeded", "failed"].indexOf(status)> -1){
+            // Enumerate the in-flight states rather than the terminal ones: a deployment
+            // that ends up aborted or skipped is finished, and treating it as outstanding
+            // would hang the whole batch.
+            if(["not-started", "accepted", "running"].indexOf(status) === -1){
                 completedDeployments.push(deploymentID);
                 if(status=== "failed") {
                     // assume all failures are due to drift
@@ -133,7 +146,7 @@ runtime: yaml
         }
 
         outstandingDeploymentIDs = outstandingDeploymentIDs.filter(x => completedDeployments.indexOf(x) === -1);
-        console.log(`Finished polling deployments: ${completedDeployments.length} out of ${outstandingDeploymentIDs.length} complete.`);
+        console.log(`Finished polling deployments: ${completedDeployments.length} completed this pass, ${outstandingDeploymentIDs.length} still outstanding.`);
     }
 
     if(driftedStacks.length) {

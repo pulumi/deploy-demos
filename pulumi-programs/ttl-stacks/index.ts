@@ -63,9 +63,19 @@ type ttlMessage = {
     expiration: string;
 }
 
+// Messages that can never succeed land here instead of redriving until the queue's
+// retention expires. A stack whose destroy is rejected permanently — revoked token,
+// stack already gone — is past its expiration on every redelivery, so it would
+// otherwise retake the same failing branch for days.
+const deadLetterQueue = new aws.sqs.Queue("ttl-dlq");
+
 // the queue for scheduling stack deletion
 const queue = new aws.sqs.Queue("ttl-queue", {
     visibilityTimeoutSeconds: 181, // TODO: tighten this up as well as lambda timeout
+    redrivePolicy: pulumi.jsonStringify({
+        deadLetterTargetArn: deadLetterQueue.arn,
+        maxReceiveCount: 5,
+    }),
 });
 
 // this processor looks for messages in the queue one at a time that have passed their expiry.
@@ -103,6 +113,9 @@ runtime: nodejs
 
             const payload = {
                 operation: "destroy",
+                // This payload is self-contained — it supplies its own sourceContext,
+                // credentials, and pre-run commands — so deliberately do not inherit the
+                // target stack's configured deployment settings.
                 inheritSettings: false,
                 sourceContext: {
                     git: {
@@ -143,7 +156,7 @@ runtime: nodejs
                 try {
                     errMessage = await response.text();
                 } catch { }
-                throw new Error(`failed to queue destroy for ${organization}/${project}/${stack}: ${errMessage}`)
+                throw new Error(`failed to queue destroy for ${organization}/${project}/${stack}: ${response.status} ${errMessage}`)
             }
 
             console.log(`destroy queued: ${organization}/${project}/${stack}\n`);
@@ -222,7 +235,7 @@ const webhookHandler = new apigateway.RestAPI("ttl-webhook-handler", {
                     try {
                         errMessage = await response.text();
                     } catch { }
-                    throw new Error(`failed to get stack: ${errMessage}`)
+                    throw new Error(`failed to get stack ${organization}/${project}/${stack}: ${response.status} ${errMessage}`)
                 }
 
                 const stackResult = await response.json();

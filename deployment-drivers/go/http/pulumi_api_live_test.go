@@ -35,10 +35,22 @@ func TestLiveListStackDeployments(t *testing.T) {
 		t.Fatalf("listStackDeployments: %v", err)
 	}
 	t.Logf("total=%d itemsPerPage=%d returned=%d", resp.Total, resp.ItemsPerPage, len(resp.Deployments))
-	// Total is the server's count of all deployments; a decode that silently
-	// produced a zero-value struct would leave it at 0 alongside a 200.
-	if resp.Total != len(resp.Deployments) && len(resp.Deployments) == 0 {
-		t.Fatalf("decoded empty deployments but server reports total=%d — envelope shape mismatch", resp.Total)
+
+	// The point of this test is to catch a wrong json tag on the envelope, and a
+	// wrong tag decodes to the zero value rather than erroring. So every assertion
+	// here has to be one that all-zero values fail: requiring a non-empty slice is
+	// what makes the per-item checks below reachable at all.
+	if len(resp.Deployments) == 0 {
+		t.Fatalf("decoded zero deployments (total=%d) — either the envelope tags are wrong "+
+			"or %s/%s/%s has no deployment history; point LIVE_* at a stack that has one",
+			resp.Total, org, project, stack)
+	}
+	if resp.Total < len(resp.Deployments) {
+		t.Errorf("total=%d is less than the %d deployments returned — envelope shape mismatch",
+			resp.Total, len(resp.Deployments))
+	}
+	if resp.ItemsPerPage == 0 {
+		t.Error("itemsPerPage decoded 0 — json tag mismatch")
 	}
 	for i, d := range resp.Deployments {
 		if d.Status == "" {
@@ -54,7 +66,23 @@ func TestLiveGetStackCurrentDeploymentStatus(t *testing.T) {
 		t.Fatalf("getStackCurrentDeploymentStatus: %v", err)
 	}
 	t.Logf("current deployment status = %q", status)
-	if status == "" {
-		t.Log("no deployments on this stack (empty status is correct here)")
+
+	// An empty status is only correct for a stack with no deployment history; on a
+	// stack that has one it means the decode dropped the field, which is the failure
+	// this test exists to catch. Tie the two together rather than tolerating "".
+	resp, err := c.listStackDeployments(context.Background(), org, project, stack, 1)
+	if err != nil {
+		t.Fatalf("listStackDeployments: %v", err)
+	}
+	if len(resp.Deployments) == 0 {
+		t.Skipf("%s/%s/%s has no deployments; nothing to assert", org, project, stack)
+	}
+
+	switch status {
+	case "not-started", "accepted", "running", "succeeded", "failed", "aborted", "skipped":
+	case "":
+		t.Fatalf("empty status for a stack with %d deployments — json tag mismatch", resp.Total)
+	default:
+		t.Fatalf("unrecognized deployment status %q", status)
 	}
 }

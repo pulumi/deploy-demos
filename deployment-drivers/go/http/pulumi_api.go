@@ -36,6 +36,8 @@ type gitContext struct {
 
 // operationContext holds operation-related configuration for the Deployment API.
 type operationContext struct {
+	// Commands to run before the Pulumi operation, in the program's directory.
+	PreRunCommands []string `json:"preRunCommands,omitempty"`
 	// Environment variables to set during a deployment
 	Environment map[string]string `json:"environmentVariables,omitempty"`
 	// Settings for authentication with cloud providers via OIDC.
@@ -231,7 +233,7 @@ func (c *pulumiClient) getStackCurrentDeploymentStatus(ctx context.Context, org,
 	return deployments.Deployments[0].Status, nil
 }
 
-func (c *pulumiClient) getStackOutputs(ctx context.Context, org, project, stack string) (map[string]interface{}, error) {
+func (c *pulumiClient) getStackOutputs(ctx context.Context, org, project, stack string) (map[string]any, error) {
 	resp, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Authorization", "token "+c.token).
