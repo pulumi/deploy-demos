@@ -5,7 +5,7 @@ import * as aws from "@pulumi/aws";
 const bucket = new aws.s3.Bucket("site-bucket");
 
 // Configure the bucket as a website
-const website = new aws.s3.BucketWebsiteConfigurationV2("site-config", {
+const website = new aws.s3.BucketWebsiteConfiguration("site-config", {
     bucket: bucket.id,
     indexDocument: {
         suffix: "index.html",
