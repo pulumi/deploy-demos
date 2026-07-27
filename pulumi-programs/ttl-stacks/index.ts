@@ -102,6 +102,8 @@ runtime: nodejs
 `;
 
             const payload = {
+                operation: "destroy",
+                inheritSettings: false,
                 sourceContext: {
                     git: {
                         repoURL: "https://github.com/pulumi/examples.git", // use a random public repo so as to not require a github token
@@ -110,7 +112,6 @@ runtime: nodejs
                     }
                 },
                 operationContext: {
-                    operation: "destroy",
                     preRunCommands: [
                         // the pulumi program gets written to disk via pre-run commands
                         `echo "$YAML_PROGRAM" | base64 -d | tee Pulumi.yaml`,
@@ -129,11 +130,21 @@ runtime: nodejs
                 }
             };
 
-            await fetch(url, {
+            const response = await fetch(url, {
                 method: "POST",
                 headers,
                 body: JSON.stringify(payload),
             });
+
+            // Without this check a rejected deployment request still logs "destroy
+            // queued" and the SQS message is dropped, so the stack leaks silently.
+            if (!response.ok) {
+                let errMessage = "";
+                try {
+                    errMessage = await response.text();
+                } catch { }
+                throw new Error(`failed to queue destroy for ${organization}/${project}/${stack}: ${errMessage}`)
+            }
 
             console.log(`destroy queued: ${organization}/${project}/${stack}\n`);
 

@@ -34,6 +34,8 @@ runtime: yaml
         // kick off deployment
 
         const payload = {
+            operation: "preview",
+            inheritSettings: false,
             sourceContext: {
                 git: {
                     repoURL: "https://github.com/pulumi/examples.git", // use a random public repo so as to not require a github token
@@ -42,7 +44,6 @@ runtime: yaml
                 }
             },
             operationContext: {
-                operation: "preview",
                 preRunCommands: [
                     // the pulumi program gets written to disk via pre-run commands
                     `echo "$YAML_PROGRAM" | base64 -d | tee Pulumi.yaml`,
