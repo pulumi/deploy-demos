@@ -126,9 +126,8 @@ runtime: nodejs
 
             const payload = {
                 operation: "destroy",
-                // This payload is self-contained — it supplies its own sourceContext,
-                // credentials, and pre-run commands — so deliberately do not inherit the
-                // target stack's configured deployment settings.
+                // Don't inherit the target stack's own deployment settings — this
+                // deployment runs a throwaway program, not the stack's real one.
                 inheritSettings: false,
                 sourceContext: {
                     git: {
@@ -187,8 +186,9 @@ runtime: nodejs
         const secondsUntilExpiry = Math.ceil((expiration.getTime() - now.getTime()) / 1000);
         const delaySeconds = Math.min(900, Math.max(0, secondsUntilExpiry));
 
-        // This handler is the queue's own event handler, so closing over `queue` would be
-        // circular. Derive the URL from the event instead.
+        // Can't use `queue.url.get()` here as the webhook handler below does: this closure
+        // is the queue's own event handler, so referencing it would be a cycle. Recover the
+        // URL from the record's ARN instead.
         const [, , , region, accountId, queueName] = rec.eventSourceARN.split(":");
         const queueUrl = `https://sqs.${region}.amazonaws.com/${accountId}/${queueName}`;
 

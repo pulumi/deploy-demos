@@ -12,11 +12,13 @@ const website = new aws.s3.BucketWebsiteConfiguration("site-config", {
     },
 });
 
-// Clear the bucket-level Block Public Access settings that govern policies, which would
-// otherwise reject the public-read policy below. The ACL-level settings stay on — the
-// policy is what makes the site readable. Account-level Block Public Access is separate and takes
-// precedence — it is on by default for AWS accounts created since April 2023, and while
-// it is enabled this bucket serves 403 no matter what is set here.
+// Despite the resource name, this deliberately leaves policy-based public access open:
+// a public-read site needs it, and the ACL-level settings stay blocked. The policy below
+// depends on this resource so it can't land while access is still blocked.
+//
+// Account-level Block Public Access is separate and takes precedence — it is on by default
+// for accounts created since April 2023, and while it is enabled this bucket serves 403
+// no matter what is set here.
 const publicAccessBlock = new aws.s3.BucketPublicAccessBlock("public-access-block", {
     bucket: bucket.id,
     blockPublicAcls: true,

@@ -41,9 +41,8 @@ runtime: yaml
 
             const payload = {
                 operation: "preview",
-                // This payload is self-contained — it supplies its own sourceContext,
-                // credentials, and pre-run commands — so deliberately do not inherit the
-                // target stack's configured deployment settings.
+                // Don't inherit the target stack's own deployment settings — this
+                // deployment runs a throwaway program, not the stack's real one.
                 inheritSettings: false,
                 sourceContext: {
                     git: {

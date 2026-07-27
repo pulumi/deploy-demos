@@ -126,8 +126,9 @@ func (s *siteServer) create(w http.ResponseWriter, r *http.Request, _ httprouter
 			},
 		},
 		OperationContext: &operationContext{
-			// The provider reads its region from stack config, so set it here rather
-			// than as a project default, which would override the -region flag.
+			// AWS_REGION alone doesn't reach the provider on a fresh stack, so set the
+			// config key too. Doing it here rather than as a project default in the
+			// program keeps the -region flag authoritative.
 			//
 			// Only new sites get this: settings are written once, at create, and
 			// updates inherit what was persisted then. Sites created before this
