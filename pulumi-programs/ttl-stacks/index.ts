@@ -28,6 +28,17 @@ const stackConfig = {
     pulumiAccessToken: config.requireSecret("pulumiAccessToken"),
 };
 
+// Secrets reach the handlers as Lambda environment variables rather than being read
+// inside the callbacks. A closure that reads them directly gets them serialized into
+// the deployment package as plaintext, where anyone who can download the zip can read
+// them; as environment variables they are encrypted at rest instead.
+const secretEnvironment = {
+    variables: {
+        PULUMI_ACCESS_TOKEN: stackConfig.pulumiAccessToken,
+        WEBHOOK_SHARED_SECRET: stackConfig.sharedSecret ?? "",
+    },
+};
+
 // Just logs information from an incoming webhook request.
 function logRequest(req: Request) {
     const webhookID = req.headers !== undefined ? req.headers["pulumi-webhook-id"] : "";
@@ -39,12 +50,13 @@ function logRequest(req: Request) {
 // message integrity. Rejects any incoming requests that don't have a valid "pulumi-webhook-signature" header.
 function authenticateRequest(req: Request): Response | undefined {
     const webhookSig = req.headers !== undefined ? req.headers["pulumi-webhook-signature"] : "";
-    if (!stackConfig.sharedSecret || !webhookSig) {
+    const sharedSecret = process.env.WEBHOOK_SHARED_SECRET;
+    if (!sharedSecret || !webhookSig) {
         return undefined;
     }
 
     const payload = Buffer.from(req.body!.toString(), req.isBase64Encoded ? "base64" : "utf8");
-    const hmacAlg = crypto.createHmac("sha256", stackConfig.sharedSecret);
+    const hmacAlg = crypto.createHmac("sha256", sharedSecret);
     const hmac = hmacAlg.update(payload).digest("hex");
 
     const result = crypto.timingSafeEqual(Buffer.from(webhookSig), Buffer.from(hmac));
@@ -136,6 +148,7 @@ const processorRole = lambdaRole("ttl-queue-processor", [
 // args only reach the event source mapping — there is no way to set the role through it.
 queue.onEvent("ttl-queue-processor", new aws.lambda.CallbackFunction("ttl-queue-processor", {
     role: processorRole,
+    environment: secretEnvironment,
     callback: async (e: aws.sqs.QueueEvent) => {
     console.log("queue processor running");
     for (let rec of e.Records) {
@@ -157,7 +170,7 @@ queue.onEvent("ttl-queue-processor", new aws.lambda.CallbackFunction("ttl-queue-
             const headers = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': `token ${stackConfig.pulumiAccessToken.get()}`
+                'Authorization': `token ${process.env.PULUMI_ACCESS_TOKEN}`
             };
 
             // The Pulumi.yaml file is necessary for pulumi stack yaml
@@ -268,6 +281,7 @@ const webhookHandler = new apigateway.RestAPI("ttl-webhook-handler", {
 
         eventHandler: new aws.lambda.CallbackFunction("ttl-webhook-post", {
             role: lambdaRole("ttl-webhook-post", ["sqs:SendMessage"]),
+            environment: secretEnvironment,
             callback: async (req: Request): Promise<Response> => {
                 logRequest(req);
                 const authenticateResult = authenticateRequest(req);
@@ -293,7 +307,7 @@ const webhookHandler = new apigateway.RestAPI("ttl-webhook-handler", {
                     const headers = {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
-                        'Authorization': `token ${stackConfig.pulumiAccessToken.get()}`
+                        'Authorization': `token ${process.env.PULUMI_ACCESS_TOKEN}`
                     };
                     const response = await fetch(url, {
                         method: "GET",

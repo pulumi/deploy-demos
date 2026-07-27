@@ -25,6 +25,10 @@ const IN_FLIGHT = ["not-started", "accepted", "running"];
 
 const driftLambda = new aws.lambda.CallbackFunction("drift-lambda", {
     timeout: LAMBDA_TIMEOUT_SECONDS,
+    // The token reaches the handler as an environment variable rather than being read
+    // inside the callback. A closure that reads it directly gets it serialized into the
+    // deployment package as plaintext; as an environment variable it is encrypted at rest.
+    environment: { variables: { PULUMI_ACCESS_TOKEN: pulumiAccessToken } },
     callback: async() => {
         let outstandingDeploymentIDs: string[] = [];
         let deploymentToStack: {[key: string]: string}= {};
@@ -41,7 +45,7 @@ const driftLambda = new aws.lambda.CallbackFunction("drift-lambda", {
             const headers = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': `token ${pulumiAccessToken.get()}`
+                'Authorization': `token ${process.env.PULUMI_ACCESS_TOKEN}`
             };
 
             // The Pulumi.yaml file is necessary for pulumi stack yaml
@@ -128,7 +132,7 @@ runtime: yaml
                 const headers = {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
-                    'Authorization': `token ${pulumiAccessToken.get()}`
+                    'Authorization': `token ${process.env.PULUMI_ACCESS_TOKEN}`
                 };
                 const response = await fetch(url, {
                     method: "GET",
