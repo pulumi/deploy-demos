@@ -25,6 +25,7 @@ const IN_FLIGHT = ["not-started", "accepted", "running"];
 
 const driftLambda = new aws.lambda.CallbackFunction("drift-lambda", {
     // CallbackFunction still defaults to nodejs22.x, which is in maintenance.
+    // Raising that default is tracked in pulumi/pulumi-aws#6336.
     runtime: aws.lambda.Runtime.NodeJS24dX,
     timeout: LAMBDA_TIMEOUT_SECONDS,
     // The token reaches the handler as an environment variable rather than being read

@@ -148,6 +148,7 @@ const processorRole = lambdaRole("ttl-queue-processor", [
 // args only reach the event source mapping — there is no way to set the role through it.
 queue.onEvent("ttl-queue-processor", new aws.lambda.CallbackFunction("ttl-queue-processor", {
     // CallbackFunction still defaults to nodejs22.x, which is in maintenance.
+    // Raising that default is tracked in pulumi/pulumi-aws#6336.
     runtime: aws.lambda.Runtime.NodeJS24dX,
     role: processorRole,
     environment: secretEnvironment,
