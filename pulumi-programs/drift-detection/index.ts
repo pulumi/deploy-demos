@@ -24,6 +24,8 @@ const POLL_BUDGET_MS = (LAMBDA_TIMEOUT_SECONDS - 60) * 1000;
 const IN_FLIGHT = ["not-started", "accepted", "running"];
 
 const driftLambda = new aws.lambda.CallbackFunction("drift-lambda", {
+    // CallbackFunction still defaults to nodejs22.x, which is in maintenance.
+    runtime: aws.lambda.Runtime.NodeJS24dX,
     timeout: LAMBDA_TIMEOUT_SECONDS,
     // The token reaches the handler as an environment variable rather than being read
     // inside the callback. A closure that reads it directly gets it serialized into the

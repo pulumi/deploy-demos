@@ -147,6 +147,8 @@ const processorRole = lambdaRole("ttl-queue-processor", [
 // The function is built explicitly rather than passed as a bare closure because onEvent's
 // args only reach the event source mapping — there is no way to set the role through it.
 queue.onEvent("ttl-queue-processor", new aws.lambda.CallbackFunction("ttl-queue-processor", {
+    // CallbackFunction still defaults to nodejs22.x, which is in maintenance.
+    runtime: aws.lambda.Runtime.NodeJS24dX,
     role: processorRole,
     environment: secretEnvironment,
     callback: async (e: aws.sqs.QueueEvent) => {
@@ -269,6 +271,7 @@ const webhookHandler = new apigateway.RestAPI("ttl-webhook-handler", {
         path: "/",
         method: "GET",
         eventHandler: new aws.lambda.CallbackFunction("ttl-webhook-get", {
+            runtime: aws.lambda.Runtime.NodeJS24dX,
             role: lambdaRole("ttl-webhook-get", []),
             callback: async () => ({
                 statusCode: 200,
@@ -280,6 +283,7 @@ const webhookHandler = new apigateway.RestAPI("ttl-webhook-handler", {
         method: "POST",
 
         eventHandler: new aws.lambda.CallbackFunction("ttl-webhook-post", {
+            runtime: aws.lambda.Runtime.NodeJS24dX,
             role: lambdaRole("ttl-webhook-post", ["sqs:SendMessage"]),
             environment: secretEnvironment,
             callback: async (req: Request): Promise<Response> => {

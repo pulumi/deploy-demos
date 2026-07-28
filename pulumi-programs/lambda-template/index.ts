@@ -75,7 +75,7 @@ for (const policy of policies) {
 let lambdaFn = new aws.lambda.Function("fn", {
     code,
     role: role.arn,
-    runtime: aws.lambda.Runtime.NodeJS22dX,
+    runtime: aws.lambda.Runtime.NodeJS24dX,
     handler: "__index.handler",
 });
 
