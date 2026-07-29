@@ -36,6 +36,8 @@ type gitContext struct {
 
 // operationContext holds operation-related configuration for the Deployment API.
 type operationContext struct {
+	// Commands to run before the Pulumi operation, in the program's directory.
+	PreRunCommands []string `json:"preRunCommands,omitempty"`
 	// Environment variables to set during a deployment
 	Environment map[string]string `json:"environmentVariables,omitempty"`
 	// Settings for authentication with cloud providers via OIDC.
@@ -80,10 +82,15 @@ type createDeploymentRequest struct {
 	Operation string `json:"operation"`
 }
 
-// listDeploymentRequest defines the body of a request to the "list deployments" REST API.
+// listDeploymentsResponse defines the body of a response from the "list deployments" REST API.
+// Deployments are returned newest-first.
 type listDeploymentsResponse struct {
-	// Status is the current status of the deployment.
-	Status string `json:"status"`
+	Deployments []struct {
+		// Status is the current status of the deployment.
+		Status string `json:"status"`
+	} `json:"deployments"`
+	ItemsPerPage int `json:"itemsPerPage"`
+	Total        int `json:"total"`
 }
 
 var errStackExists = errors.New("stack already exists")
@@ -152,7 +159,7 @@ func (c *pulumiClient) patchDeploymentSettings(ctx context.Context, org, project
 		SetBody(settings).
 		SetHeader("Authorization", "token "+c.token).
 		SetHeader("Accept", "application/json").
-		Post(pulumiURL + path.Join("/preview", org, project, stack, "deployment", "settings"))
+		Post(pulumiURL + path.Join("/stacks", org, project, stack, "deployments", "settings"))
 	if err != nil {
 		return err
 	}
@@ -172,7 +179,7 @@ func (c *pulumiClient) createDeployment(ctx context.Context, org, project, stack
 		SetBody(req).
 		SetHeader("Authorization", "token "+c.token).
 		SetHeader("Accept", "application/json").
-		Post(pulumiURL + path.Join("/preview", org, project, stack, "deployments"))
+		Post(pulumiURL + path.Join("/stacks", org, project, stack, "deployments"))
 	if err != nil {
 		return err
 	}
@@ -186,13 +193,14 @@ func (c *pulumiClient) createDeployment(ctx context.Context, org, project, stack
 	}
 }
 
-func (c *pulumiClient) listStackDeployments(ctx context.Context, org, project, stack string, page int) ([]listDeploymentsResponse, error) {
+// listStackDeployments returns the first page of the stack's deployments, newest first.
+func (c *pulumiClient) listStackDeployments(ctx context.Context, org, project, stack string) (*listDeploymentsResponse, error) {
 	resp, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Authorization", "token "+c.token).
 		SetHeader("Accept", "application/json").
 		SetDoNotParseResponse(true).
-		Get(pulumiURL + path.Join("/preview", org, project, stack, fmt.Sprintf("deployments?page=%v", page)))
+		Get(pulumiURL + path.Join("/stacks", org, project, stack, "deployments?page=1"))
 	if err != nil {
 		return nil, err
 	}
@@ -206,27 +214,29 @@ func (c *pulumiClient) listStackDeployments(ctx context.Context, org, project, s
 	}
 	defer resp.RawBody().Close()
 
-	var respBody []listDeploymentsResponse
+	var respBody listDeploymentsResponse
 	if err = json.NewDecoder(resp.RawBody()).Decode(&respBody); err != nil {
 		return nil, err
 	}
-	return respBody, nil
+	return &respBody, nil
 }
 
+// getStackCurrentDeploymentStatus returns the status of the stack's most recent
+// deployment, or "" if the stack has no deployment history.
 func (c *pulumiClient) getStackCurrentDeploymentStatus(ctx context.Context, org, project, stack string) (string, error) {
-	for page, lastDeploymentStatus := 1, ""; ; page++ {
-		deployments, err := c.listStackDeployments(ctx, org, project, stack, page)
-		if err != nil {
-			return "", err
-		}
-		if len(deployments) == 0 {
-			return lastDeploymentStatus, nil
-		}
-		lastDeploymentStatus = deployments[len(deployments)-1].Status
+	// Deployments are listed newest-first, so the first item of the first
+	// page is the most recent deployment.
+	deployments, err := c.listStackDeployments(ctx, org, project, stack)
+	if err != nil {
+		return "", err
 	}
+	if len(deployments.Deployments) == 0 {
+		return "", nil
+	}
+	return deployments.Deployments[0].Status, nil
 }
 
-func (c *pulumiClient) getStackOutputs(ctx context.Context, org, project, stack string) (map[string]interface{}, error) {
+func (c *pulumiClient) getStackOutputs(ctx context.Context, org, project, stack string) (map[string]any, error) {
 	resp, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Authorization", "token "+c.token).

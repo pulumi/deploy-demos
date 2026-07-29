@@ -84,12 +84,12 @@ func (s *siteServer) updateStack(ctx context.Context, stack, content string) err
 // create implements the Create operation for a static site.
 //
 // The Create operation has three steps:
-// 1. Create the underlying Pulumi stack for the static site. The name of the stack will be the name of the site.
-// 2. Configure deployments for the Pulumi stack. Deployments will use the program at the configured GitHub repository,
-//    branch, and directory, will obtain temporary credentials via OIDC using the configured AWS IAM Role ARN and
-//    session name, and will deploy to the configured region. Furthermore, deployments will run if the Pulumi program
-//    is updated by commits that are pushed to its branch and affect files in its directory.
-// 3. Using the Deployments API, start a deployment using for the Pulumi stack that will run the initial update.
+//  1. Create the underlying Pulumi stack for the static site. The name of the stack will be the name of the site.
+//  2. Configure deployments for the Pulumi stack. Deployments will use the program at the configured GitHub repository,
+//     branch, and directory, will obtain temporary credentials via OIDC using the configured AWS IAM Role ARN and
+//     session name, and will deploy to the configured region. Furthermore, deployments will run if the Pulumi program
+//     is updated by commits that are pushed to its branch and affect files in its directory.
+//  3. Using the Deployments API, start a deployment using for the Pulumi stack that will run the initial update.
 func (s *siteServer) create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var create createSiteRequest
 	if err := json.NewDecoder(r.Body).Decode(&create); err != nil {
@@ -126,7 +126,21 @@ func (s *siteServer) create(w http.ResponseWriter, r *http.Request, _ httprouter
 			},
 		},
 		OperationContext: &operationContext{
+			// AWS_REGION alone doesn't reach the provider on a fresh stack, so set the
+			// config key too. Doing it here rather than as a project default in the
+			// program keeps the -region flag authoritative.
+			//
+			// Only new sites get this: settings are written once, at create, and
+			// updates inherit what was persisted then. Stacks whose settings predate
+			// this pre-run command fall back to the project default in
+			// static-site/Pulumi.yaml, so a driver running with a non-default
+			// -region will not relocate them.
+			PreRunCommands: []string{
+				fmt.Sprintf("pulumi config set aws:region %s", s.region),
+			},
 			Environment: map[string]string{
+				// Still set for the AWS SDK and CLI tooling in the deployment
+				// environment; the provider itself uses the stack config above.
 				"AWS_REGION": s.region,
 			},
 			OIDC: &oidcContext{

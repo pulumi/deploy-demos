@@ -1,3 +1,9 @@
 name: bucket-time
 runtime: nodejs
 description: awesome deployment api magic with aws
+config:
+  # pulumi-aws v7 requires an explicit region on fresh stacks. Ephemeral stacks created by
+  # automation have no stack config of their own — default it at the project level so they
+  # still resolve a region.
+  aws:region:
+    value: us-west-2

@@ -8,11 +8,9 @@ const computeCodePaths = async (code: string) => {
         ["__index.js"]: new pulumi.asset.StringAsset(code),
     };
 
-    let codePathOptions: any = {};
-    codePathOptions.extraExcludePackages = [];
-    codePathOptions.extraExcludePackages.push("aws-sdk");
-
-    const modulePaths = await pulumi.runtime.computeCodePaths(codePathOptions);
+    // No exclusions: Node 18+ runtimes ship no bundled AWS SDK, so anything the handler
+    // imports has to travel in the bundle.
+    const modulePaths = await pulumi.runtime.computeCodePaths({});
 
     for (const [path, asset] of modulePaths) {
         codePaths[path] = asset;
@@ -77,7 +75,7 @@ for (const policy of policies) {
 let lambdaFn = new aws.lambda.Function("fn", {
     code,
     role: role.arn,
-    runtime: "nodejs16.x",
+    runtime: aws.lambda.Runtime.NodeJS24dX,
     handler: "__index.handler",
 });
 
