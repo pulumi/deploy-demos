@@ -2,6 +2,11 @@
 
 This application demonstrates how to use the Deployment API to expose infrastructure as RESTful resources. In our case, we've defined and exposed a static website `site` that exposes all of the `CRUD` operations. Users can hit our REST endpoint and create custom static websites by specifying the `content` field in the `POST` body. The infrastructure is defined as a separate Pulumi program in a GitHub repository. Each static website's stack is configured so that the stack is automatically updated if the underlying Pulumi program changes.
 
+Each site is served by a CloudFront distribution in front of a private S3 bucket, so
+expect a create to take several minutes — and a destroy longer still, since it disables
+the distribution before deleting it. The `url` field below is a full https URL rather
+than the bare hostname earlier versions returned.
+
 In one terminal window, run the HTTP server that uses Pulumi Deploy:
 
 ```bash
@@ -18,26 +23,26 @@ $ curl --header "Content-Type: application/json"   --request POST   --data '{"id
 $ curl http://localhost:8080/sites/hello
 {"id":"hello","status":"DEPLOYING"}
 $ curl http://localhost:8080/sites/hello
-{"id":"hello","url":"s3-website-bucket-549d9d3.s3-website-us-west-2.amazonaws.com","status":"READY"}
+{"id":"hello","url":"https://dywoxcfyztzps.cloudfront.net","status":"READY"}
 # curl our "hello" site
-$ curl s3-website-bucket-549d9d3.s3-website-us-west-2.amazonaws.com
+$ curl https://dywoxcfyztzps.cloudfront.net
 hello world
 # update our "hello" site content
 $ curl --header "Content-Type: application/json"   --request POST   --data '{"id":"hello","content":"hello updated world!\n"}'   http://localhost:8080/sites/hello
-{"id":"hello","url":"s3-website-bucket-549d9d3.s3-website-us-west-2.amazonaws.com"}
+# 202 Accepted, no body
 # wait for the site to become ready
 $ curl http://localhost:8080/sites/hello
-{"id":"hello","url":"s3-website-bucket-549d9d3.s3-website-us-west-2.amazonaws.com","status":"DEPLOYING"}
+{"id":"hello","url":"https://dywoxcfyztzps.cloudfront.net","status":"DEPLOYING"}
 $ curl http://localhost:8080/sites/hello
-{"id":"hello","url":"s3-website-bucket-549d9d3.s3-website-us-west-2.amazonaws.com","status":"DEPLOYING"}
+{"id":"hello","url":"https://dywoxcfyztzps.cloudfront.net","status":"DEPLOYING"}
 # curl our updated hello site
-$ curl s3-website-bucket-549d9d3.s3-website-us-west-2.amazonaws.com
+$ curl https://dywoxcfyztzps.cloudfront.net
 hello updated world!
 # destroy our "hello" site
 $ curl --request DELETE http://localhost:8080/sites/hello
 # wait for the site to destroy
 $ curl http://localhost:8080/sites/hello
-{"id":"hello","url":"s3-website-bucket-549d9d3.s3-website-us-west-2.amazonaws.com","status":"DEPLOYING"}
+{"id":"hello","url":"https://dywoxcfyztzps.cloudfront.net","status":"DEPLOYING"}
 $ curl http://localhost:8080/sites/hello
 {"id":"hello","status":"READY"}
 # delete the site
