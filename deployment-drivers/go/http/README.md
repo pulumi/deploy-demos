@@ -2,10 +2,12 @@
 
 This application demonstrates how to use the Deployment API to expose infrastructure as RESTful resources. In our case, we've defined and exposed a static website `site` that exposes all of the `CRUD` operations. Users can hit our REST endpoint and create custom static websites by specifying the `content` field in the `POST` body. The infrastructure is defined as a separate Pulumi program in a GitHub repository. Each static website's stack is configured so that the stack is automatically updated if the underlying Pulumi program changes.
 
-Each site is served by a CloudFront distribution in front of a private S3 bucket, so
-expect a create to take several minutes — and a destroy longer still, since it disables
-the distribution before deleting it. The `url` field below is a full https URL rather
-than the bare hostname earlier versions returned.
+Each site is served by a CloudFront distribution in front of a private S3 bucket.
+Creating one takes several minutes, because it waits for the distribution to reach
+`Deployed`; destroying takes about half that. Updating a site's content is a few
+seconds — it rewrites one S3 object and never touches the distribution. The `url`
+field below is a full https URL rather than the bare hostname earlier versions
+returned.
 
 In one terminal window, run the HTTP server that uses Pulumi Deploy:
 
