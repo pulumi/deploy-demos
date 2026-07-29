@@ -8,8 +8,8 @@ const computeCodePaths = async (code: string) => {
         ["__index.js"]: new pulumi.asset.StringAsset(code),
     };
 
-    // Node 18+ runtimes ship no bundled AWS SDK, so everything the handler imports
-    // must be bundled.
+    // No exclusions: Node 18+ runtimes ship no bundled AWS SDK, so anything the handler
+    // imports has to travel in the bundle.
     const modulePaths = await pulumi.runtime.computeCodePaths({});
 
     for (const [path, asset] of modulePaths) {

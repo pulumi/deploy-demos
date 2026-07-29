@@ -54,13 +54,6 @@ $ pulumi up
 
 You should now be able to `pulumi stack tag set ttl X && pulumi up` (X=minutes) to create stacks that destroy themselves after the specified expiry.
 
-> **Upgrading an existing deployment:** the API Gateway and its Lambdas are now
-> declared with `@pulumi/aws-apigateway` instead of `@pulumi/awsx`, which replaces
-> them and mints a **new invoke URL**. Re-run `pulumi stack output url` after
-> `pulumi up` and update the Payload URL on your Pulumi webhook. Until you do, the
-> webhook posts to the old endpoint and expired stacks are silently never destroyed.
-
-
 ## Architecture
 
 The TTL processor uses an event-driven architecture. The Pulumi Service sends events to the TTL processor via a webhook. When the lambda observes an update with a `ttl` tag, it calculates and expiration time and queues the stack for cleanup. The cleanup lambda polls from the queue looking for expired stacks, and runs a `pulumi destroy` via the Deployments REST API in the Pulumi Service.

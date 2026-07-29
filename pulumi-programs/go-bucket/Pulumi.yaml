@@ -2,8 +2,8 @@ name: go-bucket
 runtime: go
 description: A minimal AWS Go Pulumi program
 config:
-  # pulumi-aws v7 requires an explicit region on fresh stacks (v5 fell back to the
-  # AWS_REGION env var). The drivers create stacks under generated names, so
-  # Pulumi.dev.yaml does not apply to them — default it at the project level.
+  # pulumi-aws v7 requires an explicit region on fresh stacks. The drivers create stacks
+  # under generated names, so Pulumi.dev.yaml does not apply to them — default it at the
+  # project level.
   aws:region:
     value: us-west-2

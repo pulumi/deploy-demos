@@ -59,8 +59,9 @@ runtime: yaml
 
             const payload = {
                 operation: "preview",
-                // Don't inherit the target stack's own deployment settings — this
-                // deployment runs a throwaway program, not the stack's real one.
+                // The target stack's own deployment settings must not apply here — this
+                // deployment runs a throwaway program, not the stack's real one. Set
+                // explicitly rather than left to the API default.
                 inheritSettings: false,
                 sourceContext: {
                     git: {
