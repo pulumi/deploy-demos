@@ -1,0 +1,17 @@
+{
+  "name": "ttl-stacks",
+  "main": "index.ts",
+  "scripts": {
+    "build": "esbuild index.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=dist/index.js"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.108",
+    "@types/node": "^18.11.8",
+    "esbuild": "^0.15.12"
+  },
+  "dependencies": {
+    "@pulumi/aws": "^5.0.0",
+    "@pulumi/awsx": "^0.40.0",
+    "@pulumi/pulumi": "^3.45.0"
+  }
+}
